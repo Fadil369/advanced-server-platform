@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Server Platform - Frontend</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; color: white; margin-bottom: 40px; }
+        .header h1 { font-size: 3rem; margin-bottom: 10px; }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .card { background: rgba(255,255,255,0.95); padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: transform 0.3s; }
+        .card:hover { transform: translateY(-5px); }
+        .card h3 { color: #333; margin-bottom: 15px; font-size: 1.5rem; }
+        .card p { color: #666; margin-bottom: 20px; }
+        .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px; transition: background 0.3s; }
+        .btn:hover { background: #5a6fd8; }
+        .status { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; color: white; }
+        .metric { display: inline-block; margin: 10px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Advanced Server Platform</h1>
+            <p>AI Agent Management • MCP Protocol • Tool Registry • Monitoring</p>
+        </div>
+        
+        <div class="status">
+            <h3>System Status</h3>
+            <div id="metrics">Loading...</div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>🤖 AI Agents</h3>
+                <p>Manage development, infrastructure, monitoring, security, and automation agents</p>
+                <a href="https://app.brainsait.com/api/agents" class="btn">View Agents</a>
+            </div>
+            
+            <div class="card">
+                <h3>🔧 Tool Registry</h3>
+                <p>Access comprehensive development and operations tools</p>
+                <a href="https://app.brainsait.com/api/tools" class="btn">Browse Tools</a>
+            </div>
+            
+            <div class="card">
+                <h3>📚 API Documentation</h3>
+                <p>Interactive API documentation with Swagger UI</p>
+                <a href="https://docs.brainsait.com/docs" class="btn">View Docs</a>
+            </div>
+            
+            <div class="card">
+                <h3>📊 Monitoring</h3>
+                <p>Real-time metrics and system monitoring</p>
+                <a href="https://grafana.brainsait.com" class="btn">Open Grafana</a>
+            </div>
+            
+            <div class="card">
+                <h3>📈 Metrics</h3>
+                <p>Prometheus metrics and alerting</p>
+                <a href="https://prometheus.brainsait.com" class="btn">View Prometheus</a>
+            </div>
+            
+            <div class="card">
+                <h3>🎛️ Dashboard</h3>
+                <p>Unified control panel for all services</p>
+                <a href="https://app.brainsait.com/dashboard" class="btn">Open Dashboard</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadMetrics() {
+            try {
+                const response = await fetch('https://app.brainsait.com/api/status');
+                const data = await response.json();
+                document.getElementById('metrics').innerHTML = `
+                    <div class="metric">Status: ${data.status}</div>
+                    <div class="metric">CPU: ${data.system.cpu_usage}</div>
+                    <div class="metric">Memory: ${data.system.memory_usage}</div>
+                    <div class="metric">Requests: ${data.metrics.requests}</div>
+                    <div class="metric">Active Agents: ${data.metrics.agents_active}</div>
+                `;
+            } catch (error) {
+                document.getElementById('metrics').innerHTML = '<div class="metric">Status: Loading...</div>';
+            }
+        }
+        
+        loadMetrics();
+        setInterval(loadMetrics, 10000);
+    </script>
+</body>
+</html>

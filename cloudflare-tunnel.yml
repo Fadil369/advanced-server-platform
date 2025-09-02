@@ -1,0 +1,28 @@
+tunnel: b018dd7f-8df7-4cc7-a548-23b308bd2c55
+credentials-file: /home/ubuntu/.cloudflared/b018dd7f-8df7-4cc7-a548-23b308bd2c55.json
+
+ingress:
+  # Main Application
+  - hostname: app.brainsait.com
+    service: http://localhost:8000
+  
+  # API Documentation (handled by app routing)
+  - hostname: docs.brainsait.com
+    service: http://localhost:8000
+  
+  # Grafana Dashboard
+  - hostname: grafana.brainsait.com
+    service: http://localhost:3000
+  
+  # Prometheus Metrics
+  - hostname: prometheus.brainsait.com
+    service: http://localhost:9090
+  
+  # Frontend (if running separately)
+  - hostname: frontend.brainsait.com
+    service: http://localhost:3001
+  
+
+  
+  # Catch-all rule (required)
+  - service: http_status:404

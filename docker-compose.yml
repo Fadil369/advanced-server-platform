@@ -124,6 +124,14 @@ services:
     networks:
       - server-network
 
+  # Frontend
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:3001"
+    networks:
+      - server-network
+
   # Reverse proxy
   nginx:
     image: nginx:alpine

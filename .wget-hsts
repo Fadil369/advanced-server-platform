@@ -2,3 +2,4 @@
 # Edit at your own risk.
 # <hostname>	<port>	<incl. subdomains>	<created>	<max-age>
 apt.releases.hashicorp.com	0	1	1756764645	31536000
+github.com	0	1	1756774389	31536000

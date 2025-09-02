@@ -50,6 +50,7 @@ logs/
 
 # Docker
 .dockerignore
+.docker/
 
 # Terraform
 *.tfstate
@@ -82,3 +83,13 @@ htmlcov/
 # Large installation files
 *.deb
 awscliv2.zip
+
+# Cloudflare credentials
+.cloudflared/
+cloudflared-*.deb
+
+# Git credentials
+.git-credentials
+
+# Cache
+.cache/
