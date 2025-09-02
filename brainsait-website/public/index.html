@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>BrainSait - AI-Powered Platform | Advanced Intelligence</title>
+    <meta content="Advanced AI-Powered Platform with Real-time Analytics, Agent Management, and Intelligent Automation" name="description"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="/enhanced-style.css" rel="stylesheet"/>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="brain-logo">🧠</div>
+            <div class="loading-text">BrainSait</div>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <header class="nav-header">
+        <div class="container">
+            <nav class="nav-content">
+                <a class="nav-logo" href="/">
+                    <div class="nav-logo-text">
+                        <h1>🧠 BrainSait</h1>
+                        <p>AI-Powered Platform</p>
+                    </div>
+                </a>
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <span class="hamburger-icon">☰</span>
+                    <span class="close-icon">✕</span>
+                </button>
+                <ul class="nav-menu" id="navMenu">
+                    <li><a class="nav-link active" href="#home" data-section="home">Home</a></li>
+                    <li><a class="nav-link" href="#platform" data-section="platform">Platform</a></li>
+                    <li><a class="nav-link" href="#analytics" data-section="analytics">Analytics</a></li>
+                    <li><a class="nav-link" href="#sync" data-section="sync">Content Sync</a></li>
+                </ul>
+                <div class="nav-actions">
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <div class="connection-status" id="connectionStatus">
+                        <i class="fas fa-circle"></i>
+                        <span>Connected</span>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-background">
+            <div class="floating-particles"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fas fa-bolt"></i>
+                    <span>Advanced AI Platform Integration</span>
+                </div>
+                <h1 class="hero-title">
+                    Transforming Ideas Into 
+                    <span class="gradient-text">Intelligent Solutions</span>
+                </h1>
+                <p class="hero-description">
+                    BrainSait bridges complex AI concepts with real-world applications, 
+                    delivering innovation across content management, agent automation, 
+                    and intelligent workflow orchestration.
+                </p>
+                <div class="hero-cta">
+                    <button class="btn btn-primary" onclick="scrollToSection('platform')">
+                        <i class="fas fa-rocket"></i>
+                        Explore Platform
+                    </button>
+                    <button class="btn btn-secondary" onclick="openDemo()">
+                        <i class="fas fa-play"></i>
+                        Watch Demo
+                    </button>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalRequests">0</div>
+                        <div class="stat-label">API Requests</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="activeAgents">0</div>
+                        <div class="stat-label">Active Agents</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="toolsExecuted">0</div>
+                        <div class="stat-label">Tools Executed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Platform Features -->
+    <section class="platform-section" id="platform">
+        <div class="container">
+            <div class="section-header">
+                <h2>AI Excellence Pillars</h2>
+                <p>Advanced capabilities spanning critical domains of modern AI automation</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card" data-feature="content">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Content Intelligence</h3>
+                    <p>Advanced content fetching, parsing, and synchronization with AI-powered analysis</p>
+                    <div class="feature-stats">
+                        <div class="stat">
+                            <span class="stat-value" id="contentSynced">0</span>
+                            <span class="stat-label">Synced</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">Real-time</span>
+                            <span class="stat-label">Updates</span>
+                        </div>
+                    </div>
+                    <button class="feature-btn" onclick="testContentSync()">
+                        <i class="fas fa-sync"></i>
+                        Test Sync
+                    </button>
+                </div>
+
+                <div class="feature-card" data-feature="agents">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI Agent Management</h3>
+                    <p>Multi-type AI agents for development, infrastructure, monitoring, and automation</p>
+                    <div class="feature-stats">
+                        <div class="stat">
+                            <span class="stat-value" id="agentCount">0</span>
+                            <span class="stat-label">Agents</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">5</span>
+                            <span class="stat-label">Types</span>
+                        </div>
+                    </div>
+                    <button class="feature-btn" onclick="manageAgents()">
+                        <i class="fas fa-cogs"></i>
+                        Manage
+                    </button>
+                </div>
+
+                <div class="feature-card" data-feature="tools">
+                    <div class="feature-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h3>Tool Orchestration</h3>
+                    <p>Comprehensive tool registry with MCP protocol support and automated execution</p>
+                    <div class="feature-stats">
+                        <div class="stat">
+                            <span class="stat-value" id="toolCount">8</span>
+                            <span class="stat-label">Tools</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="toolsRun">0</span>
+                            <span class="stat-label">Executed</span>
+                        </div>
+                    </div>
+                    <button class="feature-btn" onclick="showTools()">
+                        <i class="fas fa-wrench"></i>
+                        View Tools
+                    </button>
+                </div>
+
+                <div class="feature-card" data-feature="monitoring">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Real-time Analytics</h3>
+                    <p>Advanced metrics, performance analytics, and intelligent monitoring dashboard</p>
+                    <div class="feature-stats">
+                        <div class="stat">
+                            <span class="stat-value" id="systemHealth">100%</span>
+                            <span class="stat-label">Health</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">99.9%</span>
+                            <span class="stat-label">Uptime</span>
+                        </div>
+                    </div>
+                    <button class="feature-btn" onclick="showAnalytics()">
+                        <i class="fas fa-analytics"></i>
+                        Analytics
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analytics Dashboard -->
+    <section class="analytics-section" id="analytics">
+        <div class="container">
+            <div class="section-header">
+                <h2>Real-time Analytics</h2>
+                <p>Monitor platform performance and usage metrics in real-time</p>
+            </div>
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3>System Performance</h3>
+                        <div class="refresh-btn" onclick="refreshMetrics()">
+                            <i class="fas fa-sync-alt"></i>
+                        </div>
+                    </div>
+                    <div class="metrics-display">
+                        <canvas id="performanceChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3>API Usage</h3>
+                        <div class="time-filter">
+                            <select id="timeFilter">
+                                <option value="1h">Last Hour</option>
+                                <option value="24h" selected>Last 24h</option>
+                                <option value="7d">Last 7 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="usage-stats">
+                        <div class="usage-item">
+                            <span class="usage-label">Total Requests</span>
+                            <span class="usage-value" id="apiRequests">0</span>
+                        </div>
+                        <div class="usage-item">
+                            <span class="usage-label">Success Rate</span>
+                            <span class="usage-value" id="successRate">100%</span>
+                        </div>
+                        <div class="usage-item">
+                            <span class="usage-label">Avg Response</span>
+                            <span class="usage-value" id="avgResponse">45ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3>Active Components</h3>
+                    </div>
+                    <div class="components-list">
+                        <div class="component-item">
+                            <div class="component-status online"></div>
+                            <span>Content Sync Engine</span>
+                            <span class="component-uptime">99.9%</span>
+                        </div>
+                        <div class="component-item">
+                            <div class="component-status online"></div>
+                            <span>AI Agent Manager</span>
+                            <span class="component-uptime">100%</span>
+                        </div>
+                        <div class="component-item">
+                            <div class="component-status online"></div>
+                            <span>Tool Registry</span>
+                            <span class="component-uptime">99.8%</span>
+                        </div>
+                        <div class="component-item">
+                            <div class="component-status online"></div>
+                            <span>Analytics Engine</span>
+                            <span class="component-uptime">100%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Sync Section -->
+    <section class="sync-section" id="sync">
+        <div class="container">
+            <div class="section-header">
+                <h2>Content Synchronization</h2>
+                <p>Real-time content fetching and synchronization from gp.thefadil.site</p>
+            </div>
+            
+            <div class="sync-dashboard">
+                <div class="sync-controls">
+                    <div class="control-group">
+                        <label>Source URL</label>
+                        <input type="text" id="sourceUrl" value="https://gp.thefadil.site" readonly>
+                    </div>
+                    <div class="control-group">
+                        <label>Sync Interval</label>
+                        <select id="syncInterval">
+                            <option value="manual">Manual</option>
+                            <option value="5m">Every 5 minutes</option>
+                            <option value="1h">Every hour</option>
+                            <option value="24h">Daily</option>
+                        </select>
+                    </div>
+                    <div class="control-actions">
+                        <button class="btn btn-primary" onclick="syncContent()" id="syncBtn">
+                            <i class="fas fa-sync"></i>
+                            Sync Now
+                        </button>
+                        <button class="btn btn-secondary" onclick="viewSyncHistory()">
+                            <i class="fas fa-history"></i>
+                            History
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sync-status" id="syncStatus">
+                    <div class="status-indicator">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Ready to sync</span>
+                    </div>
+                </div>
+
+                <div class="synced-content" id="syncedContent">
+                    <div class="content-preview">
+                        <h3>Latest Synced Content</h3>
+                        <p>Content from gp.thefadil.site will appear here after synchronization...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Floating Action Button -->
+    <div class="fab-container">
+        <button class="fab" id="mainFab">
+            <i class="fas fa-plus"></i>
+        </button>
+        <div class="fab-menu" id="fabMenu">
+            <button class="fab-item" onclick="quickSync()" title="Quick Sync">
+                <i class="fas fa-sync"></i>
+            </button>
+            <button class="fab-item" onclick="openChat()" title="AI Assistant">
+                <i class="fas fa-robot"></i>
+            </button>
+            <button class="fab-item" onclick="showMetrics()" title="Metrics">
+                <i class="fas fa-chart-bar"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div class="notification-container" id="notifications"></div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal Title</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                Modal content goes here
+            </div>
+        </div>
+    </div>
+
+    <script src="/enhanced-app.js"></script>
+</body>
+</html>

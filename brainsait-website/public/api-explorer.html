@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainSait API Explorer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0a; color: #fff; }
+        
+        .explorer { display: grid; grid-template-columns: 300px 1fr; height: 100vh; }
+        .sidebar { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px; overflow-y: auto; }
+        .main-panel { background: #111; display: flex; flex-direction: column; }
+        
+        .header { background: #1a1a1a; padding: 20px; border-bottom: 1px solid #333; }
+        .header h1 { color: #00d4ff; }
+        
+        .endpoint-group { margin-bottom: 20px; }
+        .group-title { color: #00d4ff; font-size: 18px; margin-bottom: 10px; padding: 10px 0; border-bottom: 1px solid #333; }
+        
+        .endpoint-item { padding: 10px 15px; margin: 5px 0; border-radius: 6px; cursor: pointer; transition: all 0.3s; border-left: 3px solid transparent; }
+        .endpoint-item:hover { background: rgba(0, 212, 255, 0.1); border-left-color: #00d4ff; }
+        .endpoint-item.active { background: rgba(0, 212, 255, 0.2); border-left-color: #00d4ff; }
+        
+        .method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; }
+        .method.get { background: #28a745; }
+        .method.post { background: #007bff; }
+        .method.put { background: #ffc107; color: #000; }
+        .method.delete { background: #dc3545; }
+        
+        .content-area { flex: 1; padding: 20px; overflow-y: auto; }
+        .request-panel { background: #1a1a1a; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .response-panel { background: #1a1a1a; padding: 20px; border-radius: 8px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #00d4ff; }
+        .form-group input, .form-group textarea, .form-group select { 
+            width: 100%; padding: 10px; background: #333; border: 1px solid #555; border-radius: 4px; color: #fff; 
+        }
+        
+        .btn { padding: 12px 24px; background: #00d4ff; color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn:hover { background: #00b8e6; }
+        
+        .response-code { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
+        .code-200 { background: #28a745; }
+        .code-400 { background: #ffc107; color: #000; }
+        .code-500 { background: #dc3545; }
+        
+        .json-viewer { background: #000; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 14px; overflow-x: auto; }
+        
+        @media (max-width: 768px) {
+            .explorer { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="explorer">
+        <div class="sidebar">
+            <h2 style="color: #00d4ff; margin-bottom: 20px;"><i class="fas fa-brain"></i> API Explorer</h2>
+            
+            <div class="endpoint-group">
+                <div class="group-title">Agents</div>
+                <div class="endpoint-item active" onclick="selectEndpoint('agents', 'GET', '/api/agents')">
+                    <span class="method get">GET</span> List Agents
+                </div>
+                <div class="endpoint-item" onclick="selectEndpoint('agents', 'POST', '/api/agents/{id}/execute')">
+                    <span class="method post">POST</span> Execute Agent
+                </div>
+            </div>
+            
+            <div class="endpoint-group">
+                <div class="group-title">Tools</div>
+                <div class="endpoint-item" onclick="selectEndpoint('tools', 'GET', '/api/tools')">
+                    <span class="method get">GET</span> List Tools
+                </div>
+                <div class="endpoint-item" onclick="selectEndpoint('tools', 'POST', '/api/tools/{name}/execute')">
+                    <span class="method post">POST</span> Execute Tool
+                </div>
+            </div>
+            
+            <div class="endpoint-group">
+                <div class="group-title">MCP</div>
+                <div class="endpoint-item" onclick="selectEndpoint('mcp', 'GET', '/api/mcp/servers')">
+                    <span class="method get">GET</span> MCP Servers
+                </div>
+                <div class="endpoint-item" onclick="selectEndpoint('mcp', 'POST', '/api/mcp/call')">
+                    <span class="method post">POST</span> MCP Call
+                </div>
+            </div>
+            
+            <div class="endpoint-group">
+                <div class="group-title">System</div>
+                <div class="endpoint-item" onclick="selectEndpoint('system', 'GET', '/api/metrics')">
+                    <span class="method get">GET</span> System Metrics
+                </div>
+                <div class="endpoint-item" onclick="selectEndpoint('system', 'GET', '/api/health')">
+                    <span class="method get">GET</span> Health Check
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-panel">
+            <div class="header">
+                <h1 id="endpoint-title">GET /api/agents</h1>
+                <p id="endpoint-description">Retrieve list of all available AI agents</p>
+            </div>
+            
+            <div class="content-area">
+                <div class="request-panel">
+                    <h3><i class="fas fa-paper-plane"></i> Request</h3>
+                    
+                    <div class="form-group">
+                        <label>Base URL</label>
+                        <input type="text" id="base-url" value="https://your-server.com" placeholder="Enter your server URL">
+                    </div>
+                    
+                    <div class="form-group" id="path-params" style="display: none;">
+                        <label>Path Parameters</label>
+                        <div id="path-params-container"></div>
+                    </div>
+                    
+                    <div class="form-group" id="query-params" style="display: none;">
+                        <label>Query Parameters</label>
+                        <div id="query-params-container"></div>
+                    </div>
+                    
+                    <div class="form-group" id="request-body" style="display: none;">
+                        <label>Request Body (JSON)</label>
+                        <textarea id="body-content" rows="8" placeholder="Enter JSON request body"></textarea>
+                    </div>
+                    
+                    <button class="btn" onclick="executeRequest()">
+                        <i class="fas fa-play"></i> Execute Request
+                    </button>
+                </div>
+                
+                <div class="response-panel">
+                    <h3><i class="fas fa-code"></i> Response</h3>
+                    <div id="response-status"></div>
+                    <div class="json-viewer" id="response-content">
+                        Click "Execute Request" to see the response
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEndpoint = { category: 'agents', method: 'GET', path: '/api/agents' };
+        
+        const endpointData = {
+            'agents': {
+                'GET /api/agents': {
+                    title: 'GET /api/agents',
+                    description: 'Retrieve list of all available AI agents',
+                    pathParams: [],
+                    queryParams: ['limit', 'offset', 'status'],
+                    hasBody: false,
+                    sampleResponse: {
+                        "agents": [
+                            {"id": "dev-001", "name": "Development Agent", "status": "active", "capabilities": ["code_analysis", "testing"]},
+                            {"id": "infra-001", "name": "Infrastructure Agent", "status": "active", "capabilities": ["aws_management", "monitoring"]}
+                        ],
+                        "total": 12
+                    }
+                },
+                'POST /api/agents/{id}/execute': {
+                    title: 'POST /api/agents/{id}/execute',
+                    description: 'Execute a task on a specific AI agent',
+                    pathParams: ['id'],
+                    queryParams: [],
+                    hasBody: true,
+                    sampleBody: {
+                        "task": "code_analysis",
+                        "parameters": {
+                            "code": "def hello(): return 'world'",
+                            "language": "python"
+                        }
+                    },
+                    sampleResponse: {
+                        "task_id": "task-123",
+                        "status": "completed",
+                        "result": {
+                            "analysis": "Code is syntactically correct",
+                            "suggestions": []
+                        }
+                    }
+                }
+            },
+            'tools': {
+                'GET /api/tools': {
+                    title: 'GET /api/tools',
+                    description: 'List all available tools in the system',
+                    pathParams: [],
+                    queryParams: ['category', 'search'],
+                    hasBody: false,
+                    sampleResponse: {
+                        "tools": [
+                            {"name": "code_formatter", "category": "development", "description": "Format code according to standards"},
+                            {"name": "aws_deploy", "category": "infrastructure", "description": "Deploy resources to AWS"}
+                        ],
+                        "total": 47
+                    }
+                },
+                'POST /api/tools/{name}/execute': {
+                    title: 'POST /api/tools/{name}/execute',
+                    description: 'Execute a specific tool with parameters',
+                    pathParams: ['name'],
+                    queryParams: [],
+                    hasBody: true,
+                    sampleBody: {
+                        "parameters": {
+                            "code": "def hello():return 'world'",
+                            "language": "python"
+                        }
+                    },
+                    sampleResponse: {
+                        "execution_id": "exec-456",
+                        "status": "success",
+                        "output": "def hello():\n    return 'world'"
+                    }
+                }
+            }
+        };
+        
+        function selectEndpoint(category, method, path) {
+            // Update active state
+            document.querySelectorAll('.endpoint-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentEndpoint = { category, method, path };
+            const key = `${method} ${path}`;
+            const data = endpointData[category]?.[key];
+            
+            if (data) {
+                updateUI(data);
+            }
+        }
+        
+        function updateUI(data) {
+            document.getElementById('endpoint-title').textContent = data.title;
+            document.getElementById('endpoint-description').textContent = data.description;
+            
+            // Path parameters
+            const pathParamsDiv = document.getElementById('path-params');
+            if (data.pathParams.length > 0) {
+                pathParamsDiv.style.display = 'block';
+                const container = document.getElementById('path-params-container');
+                container.innerHTML = data.pathParams.map(param => 
+                    `<input type="text" placeholder="${param}" id="path-${param}" style="margin: 5px 0; width: 100%; padding: 8px; background: #333; border: 1px solid #555; border-radius: 4px; color: #fff;">`
+                ).join('');
+            } else {
+                pathParamsDiv.style.display = 'none';
+            }
+            
+            // Query parameters
+            const queryParamsDiv = document.getElementById('query-params');
+            if (data.queryParams.length > 0) {
+                queryParamsDiv.style.display = 'block';
+                const container = document.getElementById('query-params-container');
+                container.innerHTML = data.queryParams.map(param => 
+                    `<input type="text" placeholder="${param}" id="query-${param}" style="margin: 5px 0; width: 100%; padding: 8px; background: #333; border: 1px solid #555; border-radius: 4px; color: #fff;">`
+                ).join('');
+            } else {
+                queryParamsDiv.style.display = 'none';
+            }
+            
+            // Request body
+            const bodyDiv = document.getElementById('request-body');
+            if (data.hasBody) {
+                bodyDiv.style.display = 'block';
+                document.getElementById('body-content').value = JSON.stringify(data.sampleBody, null, 2);
+            } else {
+                bodyDiv.style.display = 'none';
+            }
+        }
+        
+        function executeRequest() {
+            // Simulate API call
+            const responseStatus = document.getElementById('response-status');
+            const responseContent = document.getElementById('response-content');
+            
+            responseStatus.innerHTML = '<span class="response-code code-200">200 OK</span>';
+            
+            const key = `${currentEndpoint.method} ${currentEndpoint.path}`;
+            const data = endpointData[currentEndpoint.category]?.[key];
+            
+            if (data && data.sampleResponse) {
+                responseContent.textContent = JSON.stringify(data.sampleResponse, null, 2);
+            } else {
+                responseContent.textContent = '{\n  "status": "success",\n  "message": "Request executed successfully"\n}';
+            }
+        }
+        
+        // Initialize with first endpoint
+        const firstData = endpointData.agents['GET /api/agents'];
+        updateUI(firstData);
+    </script>
+</body>
+</html>

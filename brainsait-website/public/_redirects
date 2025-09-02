@@ -1,0 +1,7 @@
+# Cloudflare Pages redirects
+/api/* https://app.brainsait.com/api/:splat 200
+/docs/* https://docs.brainsait.com/docs/:splat 200
+/dashboard https://app.brainsait.com/dashboard 302
+/grafana https://grafana.brainsait.com 302
+/prometheus https://prometheus.brainsait.com 302
+/frontend https://frontend.brainsait.com 302

@@ -1,0 +1,13 @@
+{
+  "name": "brainsait-website",
+  "version": "1.0.0",
+  "description": "BrainSait - Advanced AI Server Platform Website",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "deploy": "wrangler pages deploy public --project-name brainsait-website"
+  },
+  "keywords": ["AI", "server", "platform", "agents", "MCP"],
+  "author": "BrainSait",
+  "license": "MIT"
+}
