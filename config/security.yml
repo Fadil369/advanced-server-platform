@@ -1,0 +1,21 @@
+security:
+  authentication:
+    jwt_secret: ${JWT_SECRET}
+    token_expiry: 3600  # 1 hour
+    refresh_token_expiry: 86400  # 24 hours
+    
+  encryption:
+    algorithm: "AES-256-GCM"
+    key_rotation_days: 90
+    phi_encryption: "required"
+    
+  access_control:
+    enforce_rbac: true
+    min_password_length: 12
+    mfa_required_roles: ["admin", "healthcare_provider"]
+    
+  audit:
+    log_all_access: true
+    phi_access_logging: "detailed"
+    retention_days: 2555  # 7 years HIPAA
+    tamper_protection: true

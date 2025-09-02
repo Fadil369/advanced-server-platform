@@ -1,0 +1,116 @@
+# 🧠 BrainSAIT + Advanced Server Platform - Integrated Dockerfile
+# NEURAL: Ultimate healthcare AI platform with AWS MCP integration
+# BRAINSAIT: HIPAA + NPHIES compliance with enterprise infrastructure
+# MEDICAL: FHIR R4 + AWS HealthLake + HealthOmics integration
+
+FROM python:3.11-slim as base
+
+# BRAINSAIT: Metadata and labels
+LABEL maintainer="BrainSAIT + Advanced Server Platform Team"
+LABEL version="2.0.0-integrated"
+LABEL description="Integrated BrainSAIT LincCore + Advanced Server Platform"
+LABEL compliance="HIPAA-NPHIES"
+LABEL healthcare="FHIR-R4-AWS-HealthLake"
+LABEL platform="advanced-server-brainsait"
+
+# NEURAL: Set working directory
+WORKDIR /app
+
+# BRAINSAIT: Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    libffi-dev \
+    libssl-dev \
+    pkg-config \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# NEURAL: Install UV (fast Python package manager)
+RUN pip install uv
+
+# BRAINSAIT: Copy requirements files
+COPY requirements.txt .
+COPY brainsait/requirements-aws-mcp.txt ./brainsait-requirements.txt
+
+# NEURAL: Install Python dependencies
+RUN uv pip install --system -r requirements.txt
+RUN uv pip install --system -r brainsait-requirements.txt
+
+# MEDICAL: Install AWS MCP servers
+RUN uv pip install --system awslabs.core-mcp-server
+RUN uv pip install --system awslabs.aws-healthlake-mcp-server
+RUN uv pip install --system awslabs.aws-healthomics-mcp-server
+
+# BRAINSAIT: Copy source code
+COPY server/ ./server/
+COPY brainsait/ ./brainsait/
+COPY medical-terminologies/ ./medical-terminologies/
+COPY config/ ./config/
+
+# NEURAL: Create integrated application structure
+COPY integrated/ ./integrated/
+
+# BRAINSAIT: Set Python path for integrated modules
+ENV PYTHONPATH=/app:/app/server:/app/brainsait:$PYTHONPATH
+
+# NEURAL: Configure environment
+ENV BRAINSAIT_ENABLED=true
+ENV AWS_MCP_ENABLED=true
+ENV FHIR_VERSION=R4
+ENV HIPAA_COMPLIANCE=strict
+ENV AUDIT_LEVEL=comprehensive
+
+# MEDICAL: Healthcare-specific environment
+ENV HEALTHCARE_MODE=true
+ENV ARABIC_NLP_SUPPORT=true
+ENV NPHIES_INTEGRATION=enabled
+ENV RTL_SUPPORT=true
+
+# BRAINSAIT: Create necessary directories
+RUN mkdir -p /app/data/{ai-models,fhir,audit,logs}
+RUN mkdir -p /app/logs/{application,security,compliance,performance}
+
+# NEURAL: Expose ports
+EXPOSE 8000
+
+# BRAINSAIT: Health check for compliance monitoring
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# AGENT: Default command to run integrated application
+CMD ["python", "-m", "integrated.main"]
+
+# ================================
+# NEURAL: Development Stage
+# ================================
+FROM base as development
+
+# Install development dependencies
+RUN uv pip install --system pytest pytest-asyncio pytest-cov black isort mypy
+
+# Copy test files
+COPY tests/ ./tests/
+COPY brainsait/tests/ ./brainsait/tests/
+
+# Development command
+CMD ["python", "-m", "integrated.main", "--reload"]
+
+# ================================
+# BRAINSAIT: Production Stage
+# ================================
+FROM base as production
+
+# NEURAL: Production optimizations
+ENV PYTHONOPTIMIZE=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# BRAINSAIT: Security hardening
+RUN groupadd -r brainsait && useradd -r -g brainsait brainsait
+RUN chown -R brainsait:brainsait /app
+USER brainsait
+
+# AGENT: Production command with Gunicorn
+CMD ["gunicorn", "integrated.main:app", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker"]

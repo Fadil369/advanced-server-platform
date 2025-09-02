@@ -1,0 +1,9 @@
+{
+  "name": "mcp-code-analysis-server",
+  "version": "1.0.0",
+  "description": "Code Analysis MCP Server for BrainSAIT LincCore",
+  "main": "server.js",
+  "dependencies": {
+    "eslint": "^8.57.0"
+  }
+}

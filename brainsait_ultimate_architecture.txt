@@ -1,0 +1,374 @@
+# 🧠 BrainSAIT LincCore™ Ultimate Healthcare Platform
+# NEURAL: Midnight Blue (#1a365d) + Medical Blue (#2b6cb8) + Signal Teal (#0ea5e9)
+# BRAINSAIT: Full HIPAA + NPHIES compliance with Arabic RTL support
+# MEDICAL: FHIR R4 + HL7 + DICOM + Saudi clinical standards
+
+version: '3.8'
+
+networks:
+  brainsait-network:
+    driver: overlay
+    attachable: true
+  ai-network:
+    driver: overlay
+    internal: true
+  secure-network:
+    driver: overlay
+    encrypted: true
+
+volumes:
+  # BRAINSAIT: Encrypted volumes for PHI data
+  fhir-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/brainsait/fhir-data
+      o: bind,encryption=aes256
+  
+  ai-models:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/brainsait/ai-models
+      o: bind
+  
+  audit-logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/brainsait/audit-logs
+      o: bind,immutable
+
+services:
+  # 🎯 CORE API GATEWAY - Enterprise Grade
+  api-gateway:
+    image: brainsait/api-gateway:enterprise
+    ports:
+      - "443:8443"  # HTTPS only
+      - "80:8080"   # Redirect to HTTPS
+    environment:
+      - BRAINSAIT_MODE=enterprise
+      - HIPAA_COMPLIANCE=true
+      - NPHIES_INTEGRATION=true
+      - RTL_SUPPORT=true
+      - RATE_LIMIT=10000/minute
+    volumes:
+      - ./ssl:/etc/ssl/brainsait
+    networks:
+      - brainsait-network
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+      restart_policy:
+        condition: any
+        delay: 10s
+
+  # 🧠 AI ORCHESTRATION ENGINE
+  masterlinc-ai:
+    image: brainsait/masterlinc:ai-powered
+    environment:
+      # AGENT: Multi-modal AI with clinical reasoning
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AZURE_COGNITIVE_KEY=${AZURE_COGNITIVE_KEY}
+      - AI_MODEL_PATHS=/models
+      - CLINICAL_REASONING=advanced
+      - ARABIC_NLP=enabled
+      - FHIR_VALIDATION=strict
+    volumes:
+      - ai-models:/models
+      - fhir-data:/fhir:ro
+    networks:
+      - ai-network
+      - brainsait-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4.0'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # 🏥 ADVANCED HEALTHCARE ENGINE
+  healthcarelinc-enterprise:
+    image: brainsait/healthcarelinc:enterprise
+    environment:
+      # MEDICAL: Complete FHIR R4 + HL7 + DICOM support
+      - FHIR_VERSION=R4
+      - HL7_INTEGRATION=true
+      - DICOM_SUPPORT=true
+      - NPHIES_ENDPOINT=${NPHIES_ENDPOINT}
+      - SAUDI_TERMINOLOGY=enabled
+      - ICD10_ARABIC=true
+      - CPT_LOCALIZED=true
+      - LOINC_TRANSLATION=arabic
+    volumes:
+      - fhir-data:/fhir
+      - ./medical-terminologies:/terminologies:ro
+    networks:
+      - brainsait-network
+      - secure-network
+    depends_on:
+      - fhir-server
+      - terminology-server
+
+  # 📊 REAL-TIME ANALYTICS ENGINE
+  analytics-engine:
+    image: brainsait/analytics:realtime
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - ELASTICSEARCH_HOST=elasticsearch
+      - KAFKA_BROKERS=kafka:9092
+      - STREAMING_ANALYTICS=true
+      - CLINICAL_INSIGHTS=enabled
+      - POPULATION_HEALTH=true
+    networks:
+      - brainsait-network
+    depends_on:
+      - clickhouse
+      - elasticsearch
+      - kafka
+
+  # 🔐 SECURITY & COMPLIANCE FORTRESS
+  compliance-engine:
+    image: brainsait/compliance:fortress
+    environment:
+      # BRAINSAIT: Ultimate security with HSM integration
+      - HSM_INTEGRATION=true
+      - VAULT_ADDR=${VAULT_ADDR}
+      - AUDIT_LEVEL=maximum
+      - HIPAA_CONTROLS=all
+      - NPHIES_COMPLIANCE=strict
+      - ZERO_TRUST=enabled
+      - THREAT_DETECTION=ai-powered
+    volumes:
+      - audit-logs:/audit
+      - ./security-policies:/policies:ro
+    networks:
+      - secure-network
+    privileged: true
+
+  # 🌐 MULTI-MODAL AI SERVICES
+  vision-ai:
+    image: brainsait/vision-ai:medical
+    environment:
+      - MODEL_TYPE=medical-imaging
+      - DICOM_PROCESSING=true
+      - RADIOLOGY_AI=enabled
+      - PATHOLOGY_AI=enabled
+      - GPU_ACCELERATION=true
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  nlp-ai-arabic:
+    image: brainsait/nlp:arabic-medical
+    environment:
+      # BILINGUAL: Advanced Arabic medical NLP
+      - LANGUAGE_MODELS=ar,en
+      - MEDICAL_NER=enabled
+      - CLINICAL_CODING=automatic
+      - SENTIMENT_ANALYSIS=clinical
+      - TRANSLATION_QUALITY=medical-grade
+    networks:
+      - ai-network
+
+  # 💾 ENTERPRISE DATA LAYER
+  postgresql-cluster:
+    image: brainsait/postgres:cluster
+    environment:
+      - POSTGRES_DB=brainsait_fhir
+      - POSTGRES_USER=brainsait_admin
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - FHIR_SCHEMA=enabled
+      - AUDIT_LOGGING=comprehensive
+      - ENCRYPTION_AT_REST=aes256
+    volumes:
+      - fhir-data:/var/lib/postgresql/data
+    networks:
+      - secure-network
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+          - node.role == worker
+
+  fhir-server:
+    image: hapiproject/hapi:latest
+    environment:
+      - spring.datasource.url=jdbc:postgresql://postgresql-cluster:5432/brainsait_fhir
+      - spring.datasource.username=brainsait_admin
+      - spring.datasource.password=${DB_PASSWORD}
+      - hapi.fhir.fhir_version=R4
+      - hapi.fhir.subscription.resthook_enabled=true
+      - hapi.fhir.allow_external_references=true
+    networks:
+      - brainsait-network
+      - secure-network
+    depends_on:
+      - postgresql-cluster
+
+  # 📈 ADVANCED MONITORING & OBSERVABILITY
+  prometheus-ha:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus-ha.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./monitoring/prometheus-ha.yml:/etc/prometheus/prometheus-ha.yml
+      - prometheus-data:/prometheus
+    networks:
+      - brainsait-network
+    deploy:
+      replicas: 2
+
+  grafana-enterprise:
+    image: grafana/grafana-enterprise:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_ENTERPRISE_LICENSE_TEXT=${GRAFANA_LICENSE}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - brainsait-network
+
+  # 🚀 HIGH-PERFORMANCE CACHE & QUEUE
+  redis-cluster:
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf
+    networks:
+      - brainsait-network
+    deploy:
+      replicas: 6
+      resources:
+        limits:
+          memory: 4G
+
+  kafka-cluster:
+    image: confluentinc/cp-kafka:latest
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_NUM_PARTITIONS=12
+    networks:
+      - brainsait-network
+    deploy:
+      replicas: 3
+
+  # 🔍 SEARCH & ANALYTICS
+  elasticsearch-cluster:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - cluster.name=brainsait-cluster
+      - node.name=es-node-${NODE_ID}
+      - cluster.initial_master_nodes=es-node-1,es-node-2,es-node-3
+      - discovery.seed_hosts=elasticsearch-cluster
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.transport.ssl.enabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - brainsait-network
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 4G
+
+  clickhouse-cluster:
+    image: clickhouse/clickhouse-server:latest
+    environment:
+      - CLICKHOUSE_DB=brainsait_analytics
+      - CLICKHOUSE_USER=analytics_user
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    networks:
+      - brainsait-network
+    deploy:
+      replicas: 3
+
+  # 🌍 CDN & EDGE COMPUTING
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN}
+    networks:
+      - brainsait-network
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
+
+  # 📱 MOBILE API BACKEND
+  mobile-api:
+    image: brainsait/mobile-api:enterprise
+    environment:
+      # BILINGUAL: Arabic/English mobile support
+      - EXPO_BACKEND=true
+      - REACT_NATIVE_SUPPORT=true
+      - PUSH_NOTIFICATIONS=enabled
+      - OFFLINE_SYNC=true
+      - RTL_LAYOUTS=supported
+    networks:
+      - brainsait-network
+
+  # 🔐 IDENTITY & ACCESS MANAGEMENT
+  keycloak-ha:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql-cluster:5432/keycloak
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+    networks:
+      - brainsait-network
+      - secure-network
+    deploy:
+      replicas: 2
+
+# 📊 VOLUME DEFINITIONS
+volumes:
+  prometheus-data:
+  grafana-data:
+  clickhouse-data:
+  elasticsearch-data:
+
+# 🚀 DEPLOYMENT CONFIGURATION
+deploy:
+  # NEURAL: Auto-scaling configuration
+  placement:
+    constraints:
+      - node.role == manager
+  resources:
+    limits:
+      memory: 128G
+      cpus: '32.0'
+  restart_policy:
+    condition: any
+    delay: 30s
+    max_attempts: 5
+    window: 120s

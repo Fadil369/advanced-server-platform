@@ -1,0 +1,10 @@
+{
+  "name": "mcp-filesystem-server",
+  "version": "1.0.0",
+  "description": "MCP server for filesystem operations",
+  "main": "server.js",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "fs-extra": "^11.1.1"
+  }
+}

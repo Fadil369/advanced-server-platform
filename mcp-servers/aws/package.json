@@ -1,0 +1,9 @@
+{
+  "name": "mcp-aws-server",
+  "version": "1.0.0",
+  "description": "AWS MCP Server for BrainSAIT LincCore",
+  "main": "server.js",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0"
+  }
+}

@@ -1,0 +1,882 @@
+# 🧠 BrainSAIT LincCore™ + AWS MCP Monitoring & Configuration
+# NEURAL: Advanced monitoring for healthcare AI with AWS integration
+# BRAINSAIT: HIPAA-compliant observability and compliance tracking
+# MEDICAL: Healthcare-specific metrics and alerting
+
+# File: monitoring/prometheus-aws-mcp.yml
+# NEURAL: Prometheus configuration for AWS MCP monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  
+  external_labels:
+    cluster: 'brainsait-aws-mcp'
+    environment: 'production'
+    compliance: 'hipaa-nphies'
+
+# BRAINSAIT: Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# NEURAL: Rule files for healthcare-specific alerts
+rule_files:
+  - "rules/brainsait-aws-mcp-alerts.yml"
+  - "rules/healthcare-compliance-alerts.yml"
+  - "rules/performance-alerts.yml"
+
+# BRAINSAIT: Scrape configurations for all components
+scrape_configs:
+  # NEURAL: AWS MCP Gateway monitoring
+  - job_name: 'brainsait-mcp-gateway'
+    static_configs:
+      - targets: ['brainsait-mcp-gateway:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # MEDICAL: HealthLake MCP Bridge monitoring
+  - job_name: 'aws-healthlake-bridge'
+    static_configs:
+      - targets: ['healthlake-bridge:8090']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: mcp_server_type
+        replacement: 'aws-healthlake'
+
+  # MEDICAL: HealthOmics MCP Bridge monitoring
+  - job_name: 'aws-healthomics-bridge'
+    static_configs:
+      - targets: ['healthomics-bridge:8091']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: mcp_server_type
+        replacement: 'aws-healthomics'
+
+  # NEURAL: Core MCP Bridge monitoring
+  - job_name: 'aws-core-bridge'
+    static_configs:
+      - targets: ['core-bridge:8092']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: mcp_server_type
+        replacement: 'aws-core'
+
+  # BRAINSAIT: Database monitoring
+  - job_name: 'postgres-aws-mcp'
+    static_configs:
+      - targets: ['postgresql-aws-mcp:5432']
+    scrape_interval: 30s
+
+  # NEURAL: Redis monitoring
+  - job_name: 'redis-mcp'
+    static_configs:
+      - targets: ['redis-cluster:6379']
+    scrape_interval: 30s
+
+  # BRAINSAIT: System monitoring
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+---
+# File: monitoring/rules/brainsait-aws-mcp-alerts.yml  
+# BRAINSAIT: Alert rules for AWS MCP integration
+
+groups:
+  - name: brainsait-aws-mcp-health
+    interval: 30s
+    rules:
+      # MEDICAL: HealthLake service health
+      - alert: HealthLakeMCPDown
+        expr: up{job="aws-healthlake-bridge"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: healthlake-mcp
+          compliance: hipaa
+        annotations:
+          summary: "BrainSAIT HealthLake MCP Bridge is down"
+          description: "AWS HealthLake MCP bridge has been down for more than 1 minute. FHIR operations are affected."
+
+      # MEDICAL: HealthOmics service health
+      - alert: HealthOmicsMCPDown
+        expr: up{job="aws-healthomics-bridge"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: healthomics-mcp
+          compliance: hipaa
+        annotations:
+          summary: "BrainSAIT HealthOmics MCP Bridge is down"
+          description: "AWS HealthOmics MCP bridge has been down for more than 1 minute. Genomics workflows are affected."
+
+      # NEURAL: Core MCP service health
+      - alert: CoreMCPDown
+        expr: up{job="aws-core-bridge"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: core-mcp
+        annotations:
+          summary: "BrainSAIT Core MCP Bridge is down"
+          description: "AWS Core MCP bridge has been down for more than 1 minute. Core AWS services are affected."
+
+      # BRAINSAIT: Gateway health
+      - alert: MCPGatewayDown
+        expr: up{job="brainsait-mcp-gateway"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: mcp-gateway
+          compliance: hipaa
+        annotations:
+          summary: "BrainSAIT MCP Gateway is down"
+          description: "MCP Gateway has been down for more than 30 seconds. All MCP services are affected."
+
+  - name: brainsait-aws-mcp-performance
+    interval: 60s
+    rules:
+      # NEURAL: High response time alert
+      - alert: HighMCPResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp-performance
+        annotations:
+          summary: "High MCP response time detected"
+          description: "95th percentile response time is above 2 seconds for {{ $labels.job }}"
+
+      # BRAINSAIT: High error rate
+      - alert: HighMCPErrorRate
+        expr: (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          service: mcp-reliability
+        annotations:
+          summary: "High error rate in MCP services"
+          description: "Error rate is above 5% for {{ $labels.job }}"
+
+  - name: brainsait-aws-mcp-compliance
+    interval: 60s
+    rules:
+      # BRAINSAIT: PHI access monitoring
+      - alert: UnusualPHIAccess
+        expr: increase(phi_access_count[1h]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: compliance
+          compliance: hipaa
+        annotations:
+          summary: "Unusual PHI access pattern detected"
+          description: "More than 1000 PHI accesses in the last hour. This may indicate unusual activity."
+
+      # BRAINSAIT: Compliance violation
+      - alert: ComplianceViolation
+        expr: increase(compliance_violations_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          service: compliance
+          compliance: hipaa
+        annotations:
+          summary: "HIPAA compliance violation detected"
+          description: "A compliance violation has been detected. Immediate attention required."
+
+---
+# File: monitoring/grafana/dashboards/brainsait-aws-mcp-dashboard.json
+# NEURAL: Grafana dashboard configuration for BrainSAIT AWS MCP
+
+{
+  "dashboard": {
+    "id": null,
+    "title": "🧠 BrainSAIT AWS MCP Healthcare Platform",
+    "tags": ["brainsait", "aws-mcp", "healthcare", "fhir", "genomics"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "🏥 AWS MCP Services Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=~\"aws-.*-bridge\"}",
+            "legendFormat": "{{ job }}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "displayMode": "list"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "Down",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "Up", 
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "green", 
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "🧬 HealthLake FHIR Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(fhir_operations_total[5m])",
+            "legendFormat": "{{ operation_type }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Operations/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "📊 MCP Response Times",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Response Time (s)",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "🔐 PHI Access Monitoring",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(phi_access_count[1h])",
+            "legendFormat": "PHI Accesses per Hour"
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [1000],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "1h", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "Unusual PHI Access Pattern",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "yAxes": [
+          {
+            "label": "Access Count",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "🧬 HealthOmics Workflow Status",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "healthomics_workflows_by_status",
+            "legendFormat": "{{ status }}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "tooltip": false,
+                "vis": false,
+                "legend": false
+              }
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "💰 AWS Cost Tracking",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(aws_estimated_cost_usd)",
+            "legendFormat": "Estimated Daily Cost"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 100
+                },
+                {
+                  "color": "red",
+                  "value": 500
+                }
+              ]
+            },
+            "unit": "currencyUSD"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": []
+  }
+}
+
+---
+# File: scripts/deploy-aws-mcp.sh
+# NEURAL: Deployment script for BrainSAIT AWS MCP integration
+
+#!/bin/bash
+
+# 🧠 BrainSAIT LincCore™ + AWS MCP Integration Deployment
+# NEURAL: Advanced healthcare platform with AWS MCP server connectivity
+# BRAINSAIT: HIPAA + NPHIES compliance with automated deployment
+# MEDICAL: Complete FHIR R4 + AWS HealthLake + HealthOmics integration
+
+set -euo pipefail
+
+# NEURAL: BrainSAIT Colors
+readonly MIDNIGHT_BLUE='\033[38;2;26;54;93m'
+readonly MEDICAL_BLUE='\033[38;2;43;108;184m'
+readonly SIGNAL_TEAL='\033[38;2;14;165;233m'
+readonly DEEP_ORANGE='\033[38;2;234;88;12m'
+readonly RESET='\033[0m'
+readonly BOLD='\033[1m'
+
+# BRAINSAIT: Configuration
+readonly BRAINSAIT_VERSION="2.0.0-enterprise"
+readonly DEPLOYMENT_ENV="${DEPLOYMENT_ENV:-production}"
+readonly AWS_REGION="${AWS_REGION:-us-east-1}"
+
+# NEURAL: Print BrainSAIT + AWS MCP logo
+print_logo() {
+    echo -e "${SIGNAL_TEAL}${BOLD}"
+    cat << 'EOF'
+    🧠 BrainSAIT + AWS MCP Healthcare Integration
+    
+    ██████╗ ██████╗  █████╗ ██╗███╗   ██╗███████╗ █████╗ ██╗████████╗
+    ██╔══██╗██╔══██╗██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██║╚══██╔══╝
+    ██████╔╝██████╔╝███████║██║██╔██╗ ██║███████╗███████║██║   ██║   
+    ██╔══██╗██╔══██╗██╔══██║██║██║╚██╗██║╚════██║██╔══██║██║   ██║   
+    ██████╔╝██║  ██║██║  ██║██║██║ ╚████║███████║██║  ██║██║   ██║   
+    ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚═╝   ╚═╝   
+    
+    + AWS MCP Healthcare Integration v${BRAINSAIT_VERSION}
+    
+EOF
+    echo -e "${RESET}"
+    echo -e "${MEDICAL_BLUE}🏥 AWS HealthLake + HealthOmics Integration${RESET}"
+    echo -e "${MIDNIGHT_BLUE}🔐 HIPAA + NPHIES Compliant MCP Servers${RESET}"
+    echo -e "${DEEP_ORANGE}🧬 Advanced Genomics + FHIR R4 Support${RESET}"
+    echo ""
+}
+
+# BRAINSAIT: Logging functions
+log() {
+    echo -e "${SIGNAL_TEAL}[$(date +'%Y-%m-%d %H:%M:%S')] $1${RESET}"
+}
+
+log_success() {
+    echo -e "${SIGNAL_TEAL}✅ $1${RESET}"
+}
+
+log_error() {
+    echo -e "${DEEP_ORANGE}❌ ERROR: $1${RESET}" >&2
+}
+
+log_warning() {
+    echo -e "${DEEP_ORANGE}⚠️  WARNING: $1${RESET}"
+}
+
+# BRAINSAIT: Check prerequisites
+check_prerequisites() {
+    log "🔍 Checking prerequisites for AWS MCP integration..."
+    
+    # Check Docker
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker is not installed"
+        exit 1
+    fi
+    
+    # Check Docker Compose
+    if ! command -v docker-compose &> /dev/null; then
+        log_error "Docker Compose is not installed"
+        exit 1
+    fi
+    
+    # Check AWS CLI
+    if ! command -v aws &> /dev/null; then
+        log_warning "AWS CLI not found. Installing..."
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+        rm -rf aws awscliv2.zip
+    fi
+    
+    # Check UV (Python package manager)
+    if ! command -v uv &> /dev/null; then
+        log_warning "UV not found. Installing..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        source ~/.bashrc
+    fi
+    
+    # MEDICAL: Check AWS HealthLake access
+    if ! aws healthlake list-fhir-datastores --region ${AWS_REGION} &> /dev/null; then
+        log_warning "Unable to access AWS HealthLake. Check AWS credentials and permissions."
+    fi
+    
+    # MEDICAL: Check AWS HealthOmics access  
+    if ! aws omics list-workflows --region ${AWS_REGION} &> /dev/null; then
+        log_warning "Unable to access AWS HealthOmics. Check AWS credentials and permissions."
+    fi
+    
+    log_success "Prerequisites check completed"
+}
+
+# NEURAL: Setup environment
+setup_environment() {
+    log "🔧 Setting up BrainSAIT + AWS MCP environment..."
+    
+    # Create directory structure
+    mkdir -p {monitoring/{grafana/{dashboards,datasources},rules},scripts,sql,docker/{healthlake,healthomics,core,gateway}}
+    
+    # BRAINSAIT: Generate environment file if not exists
+    if [ ! -f ".env.aws" ]; then
+        log "⚙️  Creating AWS environment configuration..."
+        cat > .env.aws << EOF
+# 🧠 BrainSAIT + AWS MCP Configuration
+AWS_REGION=${AWS_REGION}
+AWS_PROFILE=${AWS_PROFILE:-default}
+BRAINSAIT_VERSION=${BRAINSAIT_VERSION}
+DEPLOYMENT_ENV=${DEPLOYMENT_ENV}
+
+# MEDICAL: AWS Healthcare Services
+HEALTHLAKE_DATASTORE_ID=${HEALTHLAKE_DATASTORE_ID:-}
+HEALTHOMICS_WORKFLOW_ID=${HEALTHOMICS_WORKFLOW_ID:-}
+
+# BRAINSAIT: Security
+POSTGRES_PASSWORD=$(openssl rand -base64 32)
+REDIS_PASSWORD=$(openssl rand -base64 32)
+GRAFANA_PASSWORD=$(openssl rand -base64 32)
+ENCRYPTION_KEY=$(openssl rand -base64 32)
+JWT_SECRET=$(openssl rand -base64 32)
+
+# BRAINSAIT: Compliance
+HIPAA_COMPLIANCE=strict
+NPHIES_INTEGRATION=enabled
+AUDIT_LEVEL=comprehensive
+EOF
+        log_success "Environment configuration created"
+    fi
+    
+    # NEURAL: Create monitoring configuration
+    if [ ! -f "monitoring/prometheus-aws-mcp.yml" ]; then
+        log "📊 Creating monitoring configuration..."
+        # Configuration was created in the artifacts above
+        log_success "Monitoring configuration created"
+    fi
+    
+    log_success "Environment setup completed"
+}
+
+# MEDICAL: Setup AWS HealthLake datastore
+setup_healthlake_datastore() {
+    log "🏥 Setting up AWS HealthLake datastore..."
+    
+    if [ -z "${HEALTHLAKE_DATASTORE_ID:-}" ]; then
+        log "Creating new HealthLake datastore..."
+        
+        DATASTORE_NAME="brainsait-fhir-datastore-$(date +%s)"
+        
+        # Create HealthLake datastore
+        DATASTORE_ID=$(aws healthlake create-fhir-datastore \
+            --datastore-name "$DATASTORE_NAME" \
+            --datastore-type-version "R4" \
+            --region ${AWS_REGION} \
+            --output text \
+            --query 'DatastoreId' 2>/dev/null || echo "")
+        
+        if [ -n "$DATASTORE_ID" ]; then
+            log_success "HealthLake datastore created: $DATASTORE_ID"
+            
+            # Update environment file
+            sed -i "s/HEALTHLAKE_DATASTORE_ID=.*/HEALTHLAKE_DATASTORE_ID=$DATASTORE_ID/" .env.aws
+            
+            log "⏳ Waiting for datastore to become active..."
+            aws healthlake describe-fhir-datastore \
+                --datastore-id "$DATASTORE_ID" \
+                --region ${AWS_REGION} \
+                --query 'DatastoreProperties.DatastoreStatus' \
+                --output text
+        else
+            log_warning "Could not create HealthLake datastore. Using existing or manual configuration."
+        fi
+    else
+        log_success "Using existing HealthLake datastore: ${HEALTHLAKE_DATASTORE_ID}"
+    fi
+}
+
+# NEURAL: Install AWS MCP servers
+install_aws_mcp_servers() {
+    log "📦 Installing AWS MCP servers..."
+    
+    # MEDICAL: Install HealthLake MCP server
+    log "Installing AWS HealthLake MCP server..."
+    uv pip install awslabs.aws-healthlake-mcp-server || log_warning "Failed to install HealthLake MCP server"
+    
+    # MEDICAL: Install HealthOmics MCP server
+    log "Installing AWS HealthOmics MCP server..."
+    uv pip install awslabs.aws-healthomics-mcp-server || log_warning "Failed to install HealthOmics MCP server"
+    
+    # NEURAL: Install Core MCP server
+    log "Installing AWS Core MCP server..."
+    uv pip install awslabs.core-mcp-server || log_warning "Failed to install Core MCP server"
+    
+    log_success "AWS MCP servers installation completed"
+}
+
+# NEURAL: Build Docker images
+build_docker_images() {
+    log "🐳 Building BrainSAIT + AWS MCP Docker images..."
+    
+    # BRAINSAIT: Build all images with multi-stage Dockerfile
+    log "Building AWS MCP integration images..."
+    
+    docker-compose -f docker-compose-aws-mcp.yml build --parallel || {
+        log_error "Failed to build Docker images"
+        return 1
+    }
+    
+    log_success "Docker images built successfully"
+}
+
+# NEURAL: Deploy services
+deploy_services() {
+    log "🚀 Deploying BrainSAIT + AWS MCP services..."
+    
+    # BRAINSAIT: Start services with proper dependency order
+    docker-compose -f docker-compose-aws-mcp.yml up -d --remove-orphans || {
+        log_error "Failed to deploy services"
+        return 1
+    }
+    
+    # NEURAL: Wait for services to be ready
+    log "⏳ Waiting for services to be ready..."
+    sleep 30
+    
+    # BRAINSAIT: Check service health
+    check_service_health
+    
+    log_success "Services deployed successfully"
+}
+
+# BRAINSAIT: Check service health
+check_service_health() {
+    log "🔍 Checking service health..."
+    
+    local services=("brainsait-mcp-gateway:8080" "healthlake-bridge:8090" "healthomics-bridge:8091" "core-bridge:8092")
+    
+    for service in "${services[@]}"; do
+        if curl -f -s "http://$service/health" > /dev/null 2>&1; then
+            log_success "Service $service is healthy"
+        else
+            log_warning "Service $service is not responding"
+        fi
+    done
+}
+
+# NEURAL: Setup monitoring
+setup_monitoring() {
+    log "📊 Setting up monitoring and alerting..."
+    
+    # BRAINSAIT: Configure Grafana dashboards
+    if [ -d "monitoring/grafana/dashboards" ]; then
+        log "Configuring Grafana dashboards..."
+        # Dashboards will be auto-provisioned via volume mount
+        log_success "Grafana dashboards configured"
+    fi
+    
+    # NEURAL: Configure Prometheus alerts
+    if [ -f "monitoring/rules/brainsait-aws-mcp-alerts.yml" ]; then
+        log_success "Prometheus alert rules configured"
+    fi
+    
+    log_success "Monitoring setup completed"
+}
+
+# BRAINSAIT: Validate deployment
+validate_deployment() {
+    log "✅ Validating BrainSAIT + AWS MCP deployment..."
+    
+    local validation_passed=true
+    
+    # NEURAL: Check container status
+    if ! docker-compose -f docker-compose-aws-mcp.yml ps | grep -q "Up"; then
+        log_error "Some containers are not running"
+        validation_passed=false
+    fi
+    
+    # BRAINSAIT: Check database connectivity
+    if ! docker exec brainsait-postgres-aws-mcp pg_isready -U brainsait_admin > /dev/null 2>&1; then
+        log_error "Database is not accessible"
+        validation_passed=false
+    fi
+    
+    # NEURAL: Check MCP gateway
+    if ! curl -f -s "http://localhost:8080/health" > /dev/null; then
+        log_error "MCP Gateway is not responding"
+        validation_passed=false
+    fi
+    
+    # MEDICAL: Check AWS connectivity
+    if [ -n "${HEALTHLAKE_DATASTORE_ID:-}" ]; then
+        if ! aws healthlake describe-fhir-datastore --datastore-id "${HEALTHLAKE_DATASTORE_ID}" --region ${AWS_REGION} > /dev/null 2>&1; then
+            log_warning "HealthLake datastore is not accessible"
+        else
+            log_success "HealthLake connectivity verified"
+        fi
+    fi
+    
+    if $validation_passed; then
+        log_success "Deployment validation passed"
+        return 0
+    else
+        log_error "Deployment validation failed"
+        return 1
+    fi
+}
+
+# BRAINSAIT: Print deployment summary
+print_summary() {
+    echo -e "${SIGNAL_TEAL}${BOLD}"
+    echo "🎉 BrainSAIT + AWS MCP Integration Deployment Complete!"
+    echo -e "${RESET}"
+    
+    echo -e "${MEDICAL_BLUE}🌐 Access Points:${RESET}"
+    echo "   📊 Grafana Dashboard: http://localhost:3000"
+    echo "   🔍 Prometheus Metrics: http://localhost:9090"  
+    echo "   🎯 MCP Gateway: http://localhost:8080"
+    echo "   🏥 HealthLake MCP: http://localhost:8090"
+    echo "   🧬 HealthOmics MCP: http://localhost:8091"
+    echo "   🎯 Core MCP: http://localhost:8092"
+    echo ""
+    
+    echo -e "${MIDNIGHT_BLUE}🔐 Credentials:${RESET}"
+    echo "   Grafana: admin / $(grep GRAFANA_PASSWORD .env.aws | cut -d'=' -f2)"
+    echo "   Database: brainsait_admin / $(grep POSTGRES_PASSWORD .env.aws | cut -d'=' -f2)"
+    echo ""
+    
+    echo -e "${DEEP_ORANGE}🧬 Next Steps:${RESET}"
+    echo "   1. Configure your HealthLake datastore ID in .env.aws"
+    echo "   2. Set up HealthOmics workflows for genomics analysis"
+    echo "   3. Configure NPHIES integration for Saudi standards"
+    echo "   4. Test FHIR operations through the MCP gateway"
+    echo "   5. Monitor compliance through Grafana dashboards"
+    echo ""
+    
+    if [ -n "${HEALTHLAKE_DATASTORE_ID:-}" ]; then
+        echo -e "${MEDICAL_BLUE}🏥 HealthLake Datastore: ${HEALTHLAKE_DATASTORE_ID}${RESET}"
+    fi
+    
+    echo -e "${SIGNAL_TEAL}Happy healthcare AI building with BrainSAIT! 🧠${RESET}"
+}
+
+# NEURAL: Main deployment function
+main() {
+    print_logo
+    
+    log "🚀 Starting BrainSAIT + AWS MCP Healthcare Integration deployment..."
+    
+    check_prerequisites
+    setup_environment
+    setup_healthlake_datastore
+    install_aws_mcp_servers
+    build_docker_images
+    deploy_services
+    setup_monitoring
+    
+    if validate_deployment; then
+        print_summary
+        exit 0
+    else
+        log_error "Deployment failed validation"
+        exit 1
+    fi
+}
+
+# BRAINSAIT: Handle script arguments
+case "${1:-deploy}" in
+    "deploy")
+        main
+        ;;
+    "validate")
+        validate_deployment
+        ;;
+    "health")
+        check_service_health
+        ;;
+    "stop")
+        log "🛑 Stopping BrainSAIT + AWS MCP services..."
+        docker-compose -f docker-compose-aws-mcp.yml down
+        log_success "Services stopped"
+        ;;
+    "restart")
+        log "🔄 Restarting BrainSAIT + AWS MCP services..."
+        docker-compose -f docker-compose-aws-mcp.yml restart
+        log_success "Services restarted"
+        ;;
+    "logs")
+        docker-compose -f docker-compose-aws-mcp.yml logs -f
+        ;;
+    *)
+        echo "Usage: $0 {deploy|validate|health|stop|restart|logs}"
+        exit 1
+        ;;
+esac

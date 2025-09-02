@@ -1,0 +1,456 @@
+# 🧠 BrainSAIT LincCore™ + AWS MCP Healthcare Integration
+# NEURAL: Advanced healthcare AI with AWS HealthLake & HealthOmics
+# BRAINSAIT: HIPAA + NPHIES compliance with AWS MCP servers
+# MEDICAL: Complete FHIR R4 + AWS healthcare services integration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: brainsait-aws-mcp-config
+  namespace: brainsait
+data:
+  # BRAINSAIT: AWS MCP Healthcare Configuration
+  AWS_MCP_HEALTHLAKE_ENABLED: "true"
+  AWS_MCP_HEALTHOMICS_ENABLED: "true" 
+  AWS_MCP_COMPREHEND_MEDICAL_ENABLED: "true"
+  AWS_MCP_CORE_SERVER_ENABLED: "true"
+  
+  # MEDICAL: HealthLake Integration
+  AWS_HEALTHLAKE_DATASTORE_ID: "${AWS_HEALTHLAKE_DATASTORE_ID}"
+  AWS_HEALTHLAKE_REGION: "us-east-1"
+  FHIR_VERSION_COMPATIBILITY: "R4"
+  
+  # NEURAL: HealthOmics for Genomics
+  AWS_HEALTHOMICS_ENABLED: "true"
+  GENOMICS_WORKFLOW_SUPPORT: "true"
+  
+  # BRAINSAIT: Compliance Configuration
+  AWS_MCP_AUDIT_LOGGING: "comprehensive"
+  HIPAA_AUDIT_TRAIL: "true"
+  NPHIES_AWS_INTEGRATION: "enabled"
+  
+  # BILINGUAL: Multi-language Support
+  AWS_COMPREHEND_MEDICAL_LANGUAGE: "en,ar"
+  MEDICAL_NLP_ARABIC: "enabled"
+
+---
+# AGENT: AWS MCP HealthLake Integration Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-mcp-healthlake-bridge
+  namespace: brainsait
+  labels:
+    app: aws-mcp-healthlake-bridge
+    component: healthcare-integration
+    agent: aws-mcp
+    tier: middleware
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aws-mcp-healthlake-bridge
+  template:
+    metadata:
+      labels:
+        app: aws-mcp-healthlake-bridge
+        component: healthcare-integration
+        agent: aws-mcp
+        tier: middleware
+    spec:
+      containers:
+      - name: healthlake-mcp-bridge
+        image: brainsait/aws-mcp-bridge:healthlake
+        ports:
+        - containerPort: 8090
+          name: mcp-http
+        env:
+        # BRAINSAIT: Core Configuration
+        - name: BRAINSAIT_AGENT
+          value: "AWS_MCP_HEALTHLAKE"
+        - name: MCP_SERVER_TYPE
+          value: "aws-healthlake"
+        
+        # AWS: Authentication & Region
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AWS_PROFILE
+          value: "brainsait-healthcare"
+        
+        # MEDICAL: HealthLake Configuration
+        - name: AWS_HEALTHLAKE_DATASTORE_ID
+          valueFrom:
+            secretKeyRef:
+              name: brainsait-aws-secrets
+              key: healthlake-datastore-id
+        - name: FHIR_SERVER_ENDPOINT
+          value: "https://healthlake.us-east-1.amazonaws.com/datastore"
+        
+        # NEURAL: MCP Server Configuration
+        - name: MCP_SERVER_COMMAND
+          value: "uvx"
+        - name: MCP_SERVER_ARGS
+          value: "awslabs.aws-healthlake-mcp-server"
+        
+        # BRAINSAIT: Audit Configuration
+        - name: AUDIT_ENABLED
+          value: "true"
+        - name: HIPAA_LOGGING
+          value: "comprehensive"
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8090
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8090
+          initialDelaySeconds: 15
+          periodSeconds: 5
+
+---
+# MEDICAL: AWS MCP HealthOmics Integration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-mcp-healthomics-bridge
+  namespace: brainsait
+  labels:
+    app: aws-mcp-healthomics-bridge
+    component: genomics-integration
+    agent: aws-mcp
+    tier: middleware
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aws-mcp-healthomics-bridge
+  template:
+    metadata:
+      labels:
+        app: aws-mcp-healthomics-bridge
+        component: genomics-integration
+        agent: aws-mcp
+        tier: middleware
+    spec:
+      containers:
+      - name: healthomics-mcp-bridge
+        image: brainsait/aws-mcp-bridge:healthomics
+        ports:
+        - containerPort: 8091
+          name: mcp-http
+        env:
+        - name: BRAINSAIT_AGENT
+          value: "AWS_MCP_HEALTHOMICS"
+        - name: MCP_SERVER_TYPE
+          value: "aws-healthomics"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: MCP_SERVER_COMMAND
+          value: "uvx"
+        - name: MCP_SERVER_ARGS
+          value: "awslabs.aws-healthomics-mcp-server"
+        - name: GENOMICS_WORKFLOW_ENABLED
+          value: "true"
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+# NEURAL: AWS MCP Core Server Integration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-mcp-core-bridge
+  namespace: brainsait
+  labels:
+    app: aws-mcp-core-bridge
+    component: aws-core-integration
+    agent: aws-mcp
+    tier: middleware
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aws-mcp-core-bridge
+  template:
+    metadata:
+      labels:
+        app: aws-mcp-core-bridge
+        component: aws-core-integration
+        agent: aws-mcp
+        tier: middleware
+    spec:
+      containers:
+      - name: core-mcp-bridge
+        image: brainsait/aws-mcp-bridge:core
+        ports:
+        - containerPort: 8092
+          name: mcp-http
+        env:
+        - name: BRAINSAIT_AGENT
+          value: "AWS_MCP_CORE"
+        - name: MCP_SERVER_TYPE
+          value: "aws-core"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: MCP_SERVER_COMMAND
+          value: "uvx"
+        - name: MCP_SERVER_ARGS
+          value: "awslabs.core-mcp-server@latest"
+        
+        # NEURAL: Role-based server configuration
+        - name: "aws-foundation"
+          value: "true"
+        - name: "solutions-architect"
+          value: "true"
+        - name: "healthcare-specialist"
+          value: "true"
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+
+---
+# BRAINSAIT: AWS MCP Healthcare Gateway
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-mcp-gateway
+  namespace: brainsait
+  labels:
+    app: aws-mcp-gateway
+    component: mcp-gateway
+    tier: gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aws-mcp-gateway
+  template:
+    metadata:
+      labels:
+        app: aws-mcp-gateway
+        component: mcp-gateway
+        tier: gateway
+    spec:
+      containers:
+      - name: mcp-gateway
+        image: brainsait/mcp-gateway:enterprise
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: BRAINSAIT_COMPONENT
+          value: "AWS_MCP_GATEWAY"
+        
+        # MEDICAL: Healthcare MCP Services
+        - name: HEALTHLAKE_MCP_URL
+          value: "http://aws-mcp-healthlake-bridge:8090"
+        - name: HEALTHOMICS_MCP_URL
+          value: "http://aws-mcp-healthomics-bridge:8091"
+        - name: CORE_MCP_URL
+          value: "http://aws-mcp-core-bridge:8092"
+        
+        # BRAINSAIT: Security & Compliance
+        - name: HIPAA_VALIDATION
+          value: "enabled"
+        - name: AUDIT_ALL_REQUESTS
+          value: "true"
+        - name: NPHIES_COMPLIANCE
+          value: "enabled"
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+# BRAINSAIT: AWS MCP Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: aws-mcp-healthlake-bridge
+  namespace: brainsait
+  labels:
+    app: aws-mcp-healthlake-bridge
+    agent: aws-mcp
+spec:
+  selector:
+    app: aws-mcp-healthlake-bridge
+  ports:
+  - port: 8090
+    targetPort: 8090
+    name: mcp-http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aws-mcp-healthomics-bridge
+  namespace: brainsait
+  labels:
+    app: aws-mcp-healthomics-bridge
+    agent: aws-mcp
+spec:
+  selector:
+    app: aws-mcp-healthomics-bridge
+  ports:
+  - port: 8091
+    targetPort: 8091
+    name: mcp-http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aws-mcp-core-bridge
+  namespace: brainsait
+  labels:
+    app: aws-mcp-core-bridge
+    agent: aws-mcp
+spec:
+  selector:
+    app: aws-mcp-core-bridge
+  ports:
+  - port: 8092
+    targetPort: 8092
+    name: mcp-http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aws-mcp-gateway
+  namespace: brainsait
+  labels:
+    app: aws-mcp-gateway
+spec:
+  selector:
+    app: aws-mcp-gateway
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+
+---
+# BRAINSAIT: AWS MCP Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: brainsait-aws-secrets
+  namespace: brainsait
+type: Opaque
+data:
+  # AWS Credentials (base64 encoded)
+  aws-access-key-id: QldTX0FDQ0VTU19LRVlfSUQ=
+  aws-secret-access-key: QldTX1NFQ1JFVF9BQ0NFU1NfS0VZ
+  
+  # HealthLake Configuration
+  healthlake-datastore-id: aGVhbHRobGFrZS1kYXRhc3RvcmUtaWQ=
+  healthlake-endpoint: aHR0cHM6Ly9oZWFsdGhsYWtlLnVzLWVhc3QtMS5hbWF6b25hd3MuY29t
+  
+  # HealthOmics Configuration
+  healthomics-workflow-id: aGVhbHRob21pY3Mtd29ya2Zsb3ctaWQ=
+
+---
+# NEURAL: Network Policy for AWS MCP Integration
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aws-mcp-network-policy
+  namespace: brainsait
+spec:
+  podSelector:
+    matchLabels:
+      agent: aws-mcp
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: masterlinc-ai
+    - podSelector:
+        matchLabels:
+          app: healthcarelinc-enterprise
+    ports:
+    - protocol: TCP
+      port: 8090
+    - protocol: TCP
+      port: 8091
+    - protocol: TCP
+      port: 8092
+  egress:
+  # MEDICAL: Allow AWS HealthLake API access
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+  # NEURAL: Allow internal cluster communication
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: brainsait
+
+---
+# BRAINSAIT: Monitoring for AWS MCP Integration
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aws-mcp-monitoring
+  namespace: brainsait
+  labels:
+    app: brainsait-aws-mcp
+    monitoring: "true"
+spec:
+  selector:
+    matchLabels:
+      agent: aws-mcp
+  endpoints:
+  - port: mcp-http
+    path: /metrics
+    interval: 30s
+    honorLabels: true
+  - port: http
+    path: /metrics
+    interval: 30s
+    honorLabels: true

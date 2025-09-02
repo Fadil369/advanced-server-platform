@@ -1,0 +1,9 @@
+{
+  "name": "mcp-monitoring-server",
+  "version": "1.0.0",
+  "description": "Monitoring MCP Server for BrainSAIT LincCore",
+  "main": "server.js",
+  "dependencies": {
+    "prom-client": "^15.1.3"
+  }
+}

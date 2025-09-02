@@ -1,0 +1,398 @@
+version: '3.8'
+
+# 🧠 BrainSAIT + Advanced Server Platform - Integrated Configuration
+# NEURAL: Ultimate healthcare AI platform with AWS MCP integration
+# BRAINSAIT: HIPAA + NPHIES compliance with enterprise infrastructure
+# MEDICAL: FHIR R4 + AWS HealthLake + HealthOmics integration
+
+networks:
+  integrated-network:
+    driver: bridge
+    labels:
+      - "platform=brainsait-advanced-server"
+      - "compliance=hipaa-nphies"
+
+volumes:
+  postgres-integrated-data:
+    driver: local
+    labels:
+      - "component=database"
+      - "medical=fhir-storage"
+  redis-integrated-data:
+    driver: local
+  prometheus-integrated-data:
+    driver: local
+  grafana-integrated-data:
+    driver: local
+  ai-models-data:
+    driver: local
+    labels:
+      - "component=ai-models"
+      - "neural=clinical-reasoning"
+
+services:
+  # 🎯 INTEGRATED APPLICATION SERVER
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.integrated
+    image: brainsait/advanced-server:integrated
+    container_name: brainsait-advanced-server
+    ports:
+      - "8000:8000"
+    environment:
+      # Advanced Server Platform
+      - DATABASE_URL=postgresql://admin:${POSTGRES_PASSWORD}@postgres:5432/advanced_server_brainsait
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=${SECRET_KEY}
+      
+      # BrainSAIT Configuration
+      - BRAINSAIT_ENABLED=true
+      - BRAINSAIT_VERSION=2.0.0-enterprise
+      - HIPAA_COMPLIANCE=strict
+      - NPHIES_INTEGRATION=enabled
+      - FHIR_VERSION=R4
+      
+      # AWS MCP Integration
+      - AWS_MCP_ENABLED=true
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - HEALTHLAKE_DATASTORE_ID=${HEALTHLAKE_DATASTORE_ID}
+      - HEALTHOMICS_WORKFLOW_ID=${HEALTHOMICS_WORKFLOW_ID}
+      
+      # AI Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GPU_ACCELERATION=${GPU_ACCELERATION:-false}
+      
+      # Bilingual Support
+      - ARABIC_NLP_SUPPORT=true
+      - RTL_SUPPORT=true
+      - DEFAULT_LANGUAGE=en
+      
+      # MCP Gateway URL
+      - BRAINSAIT_MCP_GATEWAY_URL=http://brainsait-mcp-gateway:8080
+    volumes:
+      - ai-models-data:/app/data/ai-models
+      - ./medical-terminologies:/app/medical-terminologies:ro
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - brainsait-mcp-gateway
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=main-application"
+      - "brainsait.service=integrated-server"
+
+  # 🌉 BRAINSAIT MCP GATEWAY
+  brainsait-mcp-gateway:
+    build:
+      context: .
+      dockerfile: brainsait/docker/Dockerfile.mcp-gateway
+    image: brainsait/mcp-gateway:enterprise
+    container_name: brainsait-mcp-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - BRAINSAIT_VERSION=2.0.0-enterprise
+      - DEPLOYMENT_ENV=production
+      - HIPAA_COMPLIANCE=strict
+      - AUDIT_LEVEL=comprehensive
+      
+      # MCP Bridge URLs
+      - HEALTHLAKE_MCP_URL=http://healthlake-bridge:8090
+      - HEALTHOMICS_MCP_URL=http://healthomics-bridge:8091
+      - CORE_MCP_URL=http://core-bridge:8092
+      
+      # Database connection
+      - DATABASE_URL=postgresql://admin:${POSTGRES_PASSWORD}@postgres:5432/advanced_server_brainsait
+    depends_on:
+      - healthlake-bridge
+      - healthomics-bridge
+      - core-bridge
+      - postgres
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=mcp-gateway"
+      - "brainsait.service=mcp-gateway"
+
+  # 🏥 AWS HEALTHLAKE MCP BRIDGE
+  healthlake-bridge:
+    build:
+      context: .
+      dockerfile: brainsait/docker/Dockerfile.healthlake
+    image: brainsait/aws-mcp-bridge:healthlake
+    container_name: brainsait-healthlake-bridge
+    ports:
+      - "8090:8090"
+    environment:
+      - BRAINSAIT_AGENT=AWS_MCP_HEALTHLAKE
+      - MCP_SERVER_TYPE=aws-healthlake
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - FHIR_VERSION=R4
+      - HIPAA_COMPLIANCE=strict
+      - HEALTHLAKE_DATASTORE_ID=${HEALTHLAKE_DATASTORE_ID}
+      - DATABASE_URL=postgresql://admin:${POSTGRES_PASSWORD}@postgres:5432/advanced_server_brainsait
+    env_file:
+      - .env
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=healthlake-bridge"
+      - "brainsait.service=aws-mcp"
+      - "medical=fhir-r4"
+
+  # 🧬 AWS HEALTHOMICS MCP BRIDGE
+  healthomics-bridge:
+    build:
+      context: .
+      dockerfile: brainsait/docker/Dockerfile.healthomics
+    image: brainsait/aws-mcp-bridge:healthomics
+    container_name: brainsait-healthomics-bridge
+    ports:
+      - "8091:8091"
+    environment:
+      - BRAINSAIT_AGENT=AWS_MCP_HEALTHOMICS
+      - MCP_SERVER_TYPE=aws-healthomics
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - GENOMICS_WORKFLOW_SUPPORT=true
+      - HIPAA_COMPLIANCE=strict
+      - HEALTHOMICS_WORKFLOW_ID=${HEALTHOMICS_WORKFLOW_ID}
+    env_file:
+      - .env
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=healthomics-bridge"
+      - "brainsait.service=aws-mcp"
+      - "medical=genomics"
+
+  # 🎯 AWS CORE MCP BRIDGE
+  core-bridge:
+    build:
+      context: .
+      dockerfile: brainsait/docker/Dockerfile.core
+    image: brainsait/aws-mcp-bridge:core
+    container_name: brainsait-core-bridge
+    ports:
+      - "8092:8092"
+    environment:
+      - BRAINSAIT_AGENT=AWS_MCP_CORE
+      - MCP_SERVER_TYPE=aws-core
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - aws-foundation=true
+      - solutions-architect=true
+      - healthcare-specialist=true
+      - FASTMCP_LOG_LEVEL=INFO
+    env_file:
+      - .env
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=core-bridge"
+      - "brainsait.service=aws-mcp"
+
+  # 💾 ENHANCED POSTGRESQL WITH FHIR SCHEMA
+  postgres:
+    image: postgres:15-alpine
+    container_name: brainsait-postgres-integrated
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=advanced_server_brainsait
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-integrated-data:/var/lib/postgresql/data
+      # Initialize with both schemas
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-advanced-server.sql
+      - ./brainsait/sql/init-fhir-db.sql:/docker-entrypoint-initdb.d/02-brainsait-fhir.sql
+      - ./brainsait/sql/init-aws-mcp.sql:/docker-entrypoint-initdb.d/03-aws-mcp.sql
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=database"
+      - "medical=fhir-storage"
+      - "brainsait.service=postgres"
+
+  # 🚀 REDIS CLUSTER
+  redis:
+    image: redis:7-alpine
+    container_name: brainsait-redis-integrated
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-integrated-data:/data
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=cache"
+      - "brainsait.service=redis"
+
+  # 📊 ENHANCED PROMETHEUS WITH HEALTHCARE METRICS
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: brainsait-prometheus-integrated
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./monitoring/prometheus-integrated.yml:/etc/prometheus/prometheus.yml
+      - prometheus-integrated-data:/prometheus
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=monitoring"
+      - "brainsait.service=prometheus"
+
+  # 📈 ENHANCED GRAFANA WITH BRAINSAIT DASHBOARDS
+  grafana:
+    image: grafana/grafana:latest
+    container_name: brainsait-grafana-integrated
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel
+      - GF_FEATURE_TOGGLES_ENABLE=publicDashboards
+    volumes:
+      - grafana-integrated-data:/var/lib/grafana
+      # Advanced Server Platform dashboards
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards/platform
+      # BrainSAIT healthcare dashboards
+      - ./brainsait/monitoring/dashboards:/etc/grafana/provisioning/dashboards/brainsait
+      # Integrated datasources
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=visualization"
+      - "brainsait.service=grafana"
+
+  # 🔍 ELASTICSEARCH FOR HEALTHCARE SEARCH
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: brainsait-elasticsearch
+    environment:
+      - cluster.name=brainsait-cluster
+      - node.name=es-node-1
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=search"
+      - "medical=clinical-search"
+
+  # 🏥 FHIR SERVER (HAPI FHIR)
+  fhir-server:
+    image: hapiproject/hapi:latest
+    container_name: brainsait-fhir-server
+    ports:
+      - "8081:8080"
+    environment:
+      - spring.datasource.url=jdbc:postgresql://postgres:5432/advanced_server_brainsait
+      - spring.datasource.username=admin
+      - spring.datasource.password=${POSTGRES_PASSWORD}
+      - hapi.fhir.fhir_version=R4
+      - hapi.fhir.subscription.resthook_enabled=true
+      - hapi.fhir.allow_external_references=true
+      - hapi.fhir.allow_multiple_delete=true
+      - hapi.fhir.reuse_cached_search_results_millis=60000
+    depends_on:
+      - postgres
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=fhir-server"
+      - "medical=fhir-r4"
+
+  # 🔐 KEYCLOAK FOR AUTHENTICATION
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: brainsait-keycloak
+    ports:
+      - "8082:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/advanced_server_brainsait
+      - KC_DB_USERNAME=admin
+      - KC_DB_PASSWORD=${POSTGRES_PASSWORD}
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_HOSTNAME_STRICT=false
+    command: start-dev
+    depends_on:
+      - postgres
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=authentication"
+      - "security=oauth2"
+
+  # 📱 NGINX REVERSE PROXY
+  nginx:
+    image: nginx:alpine
+    container_name: brainsait-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx-integrated.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - app
+      - brainsait-mcp-gateway
+      - grafana
+    networks:
+      - integrated-network
+    restart: unless-stopped
+    labels:
+      - "component=reverse-proxy"
+      - "security=ssl-termination"
+
+volumes:
+  elasticsearch-data:
+    driver: local
+    labels:
+      - "component=search-data"

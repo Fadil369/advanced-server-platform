@@ -1,0 +1,720 @@
+# 🧠 BrainSAIT LincCore™ + AWS MCP Integration - Docker Configuration
+# NEURAL: Advanced healthcare AI with AWS MCP server connectivity
+# BRAINSAIT: HIPAA + NPHIES compliance with containerized AWS healthcare services
+# MEDICAL: Complete FHIR R4 + AWS HealthLake + HealthOmics integration
+
+# NEURAL: Multi-stage build for AWS MCP Bridge
+FROM python:3.11-slim as aws-mcp-base
+
+# BRAINSAIT: Metadata and labels
+LABEL maintainer="BrainSAIT Development Team"
+LABEL version="2.0.0-enterprise"
+LABEL description="BrainSAIT LincCore AWS MCP Healthcare Integration"
+LABEL compliance="HIPAA-NPHIES"
+LABEL healthcare="FHIR-R4-AWS-HealthLake"
+
+# NEURAL: Set working directory
+WORKDIR /opt/brainsait
+
+# BRAINSAIT: Install system dependencies for healthcare and AWS
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    libffi-dev \
+    libssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# NEURAL: Install UV (fast Python package manager)
+RUN pip install uv
+
+# MEDICAL: Install Python dependencies for healthcare and AWS
+COPY requirements-aws-mcp.txt .
+RUN uv pip install --system -r requirements-aws-mcp.txt
+
+# BRAINSAIT: Copy BrainSAIT source code
+COPY src/ ./src/
+COPY config/ ./config/
+COPY medical-terminologies/ ./medical-terminologies/
+
+# NEURAL: Set Python path for BrainSAIT modules
+ENV PYTHONPATH=/opt/brainsait/src:/opt/brainsait:$PYTHONPATH
+
+# BRAINSAIT: Configure AWS and healthcare environment
+ENV AWS_DEFAULT_REGION=us-east-1
+ENV BRAINSAIT_VERSION=2.0.0-enterprise
+ENV FHIR_VERSION=R4
+ENV HIPAA_COMPLIANCE=strict
+ENV AUDIT_LEVEL=comprehensive
+
+# MEDICAL: Healthcare-specific environment
+ENV HEALTHCARE_MODE=true
+ENV ARABIC_NLP_SUPPORT=true
+ENV NPHIES_INTEGRATION=enabled
+
+# NEURAL: Expose ports for MCP servers
+EXPOSE 8090 8091 8092 8080
+
+# BRAINSAIT: Health check for compliance monitoring
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# AGENT: Default command to run BrainSAIT AWS MCP integration
+CMD ["python", "-m", "brainsait.aws_mcp.main"]
+
+# ================================
+# NEURAL: AWS MCP HealthLake Bridge
+# ================================
+FROM aws-mcp-base as healthlake-bridge
+
+# MEDICAL: HealthLake-specific configuration
+ENV MCP_SERVER_TYPE=aws-healthlake
+ENV FHIR_VALIDATION=true
+ENV HEALTHLAKE_INTEGRATION=enabled
+
+# BRAINSAIT: Install AWS HealthLake MCP server
+RUN uv pip install --system awslabs.aws-healthlake-mcp-server
+
+# NEURAL: Copy HealthLake bridge configuration
+COPY docker/healthlake/ ./healthlake/
+
+# MEDICAL: Expose HealthLake MCP port
+EXPOSE 8090
+
+# AGENT: Start HealthLake MCP bridge
+CMD ["python", "-m", "brainsait.aws_mcp.bridges.healthlake"]
+
+# ===============================
+# MEDICAL: AWS MCP HealthOmics Bridge  
+# ===============================
+FROM aws-mcp-base as healthomics-bridge
+
+# MEDICAL: HealthOmics-specific configuration
+ENV MCP_SERVER_TYPE=aws-healthomics
+ENV GENOMICS_WORKFLOW_SUPPORT=true
+ENV HEALTHOMICS_INTEGRATION=enabled
+
+# BRAINSAIT: Install AWS HealthOmics MCP server
+RUN uv pip install --system awslabs.aws-healthomics-mcp-server
+
+# NEURAL: Copy HealthOmics bridge configuration
+COPY docker/healthomics/ ./healthomics/
+
+# MEDICAL: Expose HealthOmics MCP port
+EXPOSE 8091
+
+# AGENT: Start HealthOmics MCP bridge
+CMD ["python", "-m", "brainsait.aws_mcp.bridges.healthomics"]
+
+# =============================
+# NEURAL: AWS MCP Core Bridge
+# =============================
+FROM aws-mcp-base as core-bridge
+
+# NEURAL: Core MCP server configuration
+ENV MCP_SERVER_TYPE=aws-core
+ENV AWS_FOUNDATION=true
+ENV SOLUTIONS_ARCHITECT=true
+ENV HEALTHCARE_SPECIALIST=true
+
+# BRAINSAIT: Install AWS Core MCP server
+RUN uv pip install --system awslabs.core-mcp-server
+
+# NEURAL: Copy Core bridge configuration  
+COPY docker/core/ ./core/
+
+# NEURAL: Expose Core MCP port
+EXPOSE 8092
+
+# AGENT: Start Core MCP bridge
+CMD ["python", "-m", "brainsait.aws_mcp.bridges.core"]
+
+# ===============================
+# BRAINSAIT: AWS MCP Gateway
+# ===============================
+FROM aws-mcp-base as mcp-gateway
+
+# NEURAL: Gateway-specific configuration
+ENV BRAINSAIT_COMPONENT=AWS_MCP_GATEWAY
+ENV LOAD_BALANCING=enabled
+ENV HEALTH_MONITORING=enabled
+
+# BRAINSAIT: Install gateway dependencies
+RUN uv pip install --system fastapi uvicorn nginx-python
+
+# NEURAL: Copy gateway configuration
+COPY docker/gateway/ ./gateway/
+COPY nginx/ ./nginx/
+
+# BRAINSAIT: Expose gateway port
+EXPOSE 8080
+
+# AGENT: Start MCP gateway
+CMD ["python", "-m", "brainsait.aws_mcp.gateway"]
+
+# ================================
+# REQUIREMENTS FILE CONTENT
+# ================================
+
+---
+# File: requirements-aws-mcp.txt
+# BRAINSAIT: Python dependencies for AWS MCP integration
+
+# NEURAL: Core BrainSAIT dependencies
+pydantic>=2.5.0
+fastapi>=0.104.0  
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+asyncio-mqtt>=0.11.1
+
+# AWS: Healthcare and cloud services
+boto3>=1.34.0
+botocore>=1.34.0
+awslabs.core-mcp-server>=1.0.0
+awslabs.aws-healthlake-mcp-server>=1.0.0
+awslabs.aws-healthomics-mcp-server>=1.0.0
+
+# MEDICAL: FHIR and healthcare standards
+fhir.resources>=7.0.2
+hl7apy>=1.3.4
+pydicom>=2.4.0
+python-dateutil>=2.8.2
+
+# BRAINSAIT: Security and compliance
+cryptography>=41.0.0
+pyjwt[crypto]>=2.8.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+
+# NEURAL: AI and language processing
+openai>=1.3.0
+anthropic>=0.7.0
+transformers>=4.35.0
+torch>=2.1.0
+
+# BILINGUAL: Arabic language support
+arabic-reshaper>=3.0.0
+python-bidi>=0.4.2
+polyglot>=16.7.4
+
+# BRAINSAIT: Monitoring and observability
+prometheus-client>=0.19.0
+structlog>=23.2.0
+uvloop>=0.19.0
+orjson>=3.9.0
+
+# NEURAL: Database and caching
+asyncpg>=0.29.0
+redis[hiredis]>=5.0.0
+sqlalchemy[asyncio]>=2.0.23
+
+# MEDICAL: Date/time handling for healthcare
+pytz>=2023.3
+python-dateutil>=2.8.2
+pendulum>=2.1.2
+
+---
+# File: docker-compose-aws-mcp.yml
+# NEURAL: Docker Compose for BrainSAIT AWS MCP Integration
+
+version: '3.8'
+
+services:
+  # BRAINSAIT: AWS MCP Gateway
+  brainsait-mcp-gateway:
+    build:
+      context: .
+      target: mcp-gateway
+      dockerfile: Dockerfile.aws-mcp
+    image: brainsait/mcp-gateway:enterprise
+    container_name: brainsait-mcp-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - BRAINSAIT_VERSION=2.0.0-enterprise
+      - DEPLOYMENT_ENV=production
+      - HIPAA_COMPLIANCE=strict
+      - AUDIT_LEVEL=comprehensive
+      - HEALTHLAKE_MCP_URL=http://healthlake-bridge:8090
+      - HEALTHOMICS_MCP_URL=http://healthomics-bridge:8091
+      - CORE_MCP_URL=http://core-bridge:8092
+    depends_on:
+      - healthlake-bridge
+      - healthomics-bridge
+      - core-bridge
+      - redis-cluster
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=mcp-gateway"
+      - "brainsait.compliance=hipaa-nphies"
+
+  # MEDICAL: AWS HealthLake MCP Bridge
+  healthlake-bridge:
+    build:
+      context: .
+      target: healthlake-bridge
+      dockerfile: Dockerfile.aws-mcp
+    image: brainsait/aws-mcp-bridge:healthlake
+    container_name: brainsait-healthlake-bridge
+    ports:
+      - "8090:8090"
+    environment:
+      - BRAINSAIT_AGENT=AWS_MCP_HEALTHLAKE
+      - MCP_SERVER_TYPE=aws-healthlake
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - FHIR_VERSION=R4
+      - HIPAA_COMPLIANCE=strict
+      - HEALTHLAKE_DATASTORE_ID=${HEALTHLAKE_DATASTORE_ID}
+    env_file:
+      - .env.aws
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=healthlake-bridge"
+      - "brainsait.medical=fhir-r4"
+
+  # MEDICAL: AWS HealthOmics MCP Bridge  
+  healthomics-bridge:
+    build:
+      context: .
+      target: healthomics-bridge
+      dockerfile: Dockerfile.aws-mcp
+    image: brainsait/aws-mcp-bridge:healthomics
+    container_name: brainsait-healthomics-bridge
+    ports:
+      - "8091:8091"
+    environment:
+      - BRAINSAIT_AGENT=AWS_MCP_HEALTHOMICS
+      - MCP_SERVER_TYPE=aws-healthomics
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - GENOMICS_WORKFLOW_SUPPORT=true
+      - HIPAA_COMPLIANCE=strict
+    env_file:
+      - .env.aws
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=healthomics-bridge"
+      - "brainsait.medical=genomics"
+
+  # NEURAL: AWS Core MCP Bridge
+  core-bridge:
+    build:
+      context: .
+      target: core-bridge
+      dockerfile: Dockerfile.aws-mcp
+    image: brainsait/aws-mcp-bridge:core
+    container_name: brainsait-core-bridge
+    ports:
+      - "8092:8092"
+    environment:
+      - BRAINSAIT_AGENT=AWS_MCP_CORE
+      - MCP_SERVER_TYPE=aws-core
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - aws-foundation=true
+      - solutions-architect=true
+      - healthcare-specialist=true
+      - FASTMCP_LOG_LEVEL=INFO
+    env_file:
+      - .env.aws
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=core-bridge"
+      - "brainsait.neural=aws-services"
+
+  # NEURAL: Redis Cluster for MCP coordination
+  redis-cluster:
+    image: redis:7-alpine
+    container_name: brainsait-redis-mcp
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --cluster-enabled yes
+    volumes:
+      - redis-mcp-data:/data
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=redis-mcp"
+
+  # BRAINSAIT: PostgreSQL for FHIR + AWS data
+  postgresql-aws-mcp:
+    image: postgres:15-alpine
+    container_name: brainsait-postgres-aws-mcp
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=brainsait_aws_mcp
+      - POSTGRES_USER=brainsait_admin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-aws-mcp-data:/var/lib/postgresql/data
+      - ./sql/init-aws-mcp.sql:/docker-entrypoint-initdb.d/init-aws-mcp.sql
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=postgres-aws-mcp"
+      - "brainsait.medical=fhir-storage"
+
+  # NEURAL: Prometheus for AWS MCP monitoring
+  prometheus-aws-mcp:
+    image: prom/prometheus:latest
+    container_name: brainsait-prometheus-aws-mcp
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus-aws-mcp.yml:/etc/prometheus/prometheus.yml
+      - prometheus-aws-mcp-data:/prometheus
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=prometheus-aws-mcp"
+
+  # NEURAL: Grafana for AWS MCP visualization
+  grafana-aws-mcp:
+    image: grafana/grafana:latest
+    container_name: brainsait-grafana-aws-mcp
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana-aws-mcp-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus-aws-mcp
+    networks:
+      - brainsait-aws-mcp
+    restart: unless-stopped
+    labels:
+      - "brainsait.component=grafana-aws-mcp"
+
+networks:
+  brainsait-aws-mcp:
+    driver: bridge
+    labels:
+      - "brainsait.network=aws-mcp-integration"
+      - "brainsait.compliance=hipaa-nphies"
+
+volumes:
+  redis-mcp-data:
+    driver: local
+    labels:
+      - "brainsait.volume=redis-mcp"
+  postgres-aws-mcp-data:
+    driver: local
+    labels:
+      - "brainsait.volume=postgres-aws-mcp"
+      - "brainsait.medical=fhir-storage"
+  prometheus-aws-mcp-data:
+    driver: local
+    labels:
+      - "brainsait.volume=prometheus-aws-mcp"
+  grafana-aws-mcp-data:
+    driver: local
+    labels:
+      - "brainsait.volume=grafana-aws-mcp"
+
+---
+# File: .env.aws (Environment variables for AWS integration)
+# BRAINSAIT: AWS MCP Integration Environment Configuration
+
+# AWS: Core Configuration
+AWS_REGION=us-east-1
+AWS_PROFILE=brainsait-healthcare
+AWS_ACCESS_KEY_ID=your_access_key_here
+AWS_SECRET_ACCESS_KEY=your_secret_key_here
+
+# MEDICAL: AWS HealthLake Configuration
+HEALTHLAKE_DATASTORE_ID=your_healthlake_datastore_id
+HEALTHLAKE_ENDPOINT=https://healthlake.us-east-1.amazonaws.com
+HEALTHLAKE_FHIR_VERSION=R4
+
+# MEDICAL: AWS HealthOmics Configuration  
+HEALTHOMICS_WORKFLOW_ID=your_healthomics_workflow_id
+HEALTHOMICS_ENDPOINT=https://omics.us-east-1.amazonaws.com
+
+# MEDICAL: AWS Comprehend Medical
+COMPREHEND_MEDICAL_ENDPOINT=https://comprehendmedical.us-east-1.amazonaws.com
+ARABIC_MEDICAL_NLP=enabled
+
+# BRAINSAIT: Database Configuration
+POSTGRES_PASSWORD=BrainSAITAWSMCPPostgreSQL2024!
+REDIS_PASSWORD=BrainSAITAWSMCPRedis2024!
+
+# NEURAL: Monitoring Configuration
+GRAFANA_PASSWORD=BrainSAITAWSMCPGrafana2024!
+PROMETHEUS_RETENTION=90d
+
+# BRAINSAIT: Security Configuration
+ENCRYPTION_KEY=your_32_byte_base64_encryption_key_here
+JWT_SECRET=your_jwt_secret_key_here
+AUDIT_WEBHOOK_URL=https://your-audit-system.com/webhook
+
+# BRAINSAIT: Compliance Configuration
+HIPAA_COMPLIANCE=strict
+NPHIES_INTEGRATION=enabled
+SAUDI_STANDARDS=true
+AUDIT_LEVEL=comprehensive
+
+---
+# File: sql/init-aws-mcp.sql
+# BRAINSAIT: Database initialization for AWS MCP integration
+
+-- 🧠 BrainSAIT LincCore™ + AWS MCP Database Schema
+-- MEDICAL: FHIR-compliant healthcare data with AWS integration
+-- BRAINSAIT: HIPAA-compliant with comprehensive audit logging
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+
+-- BRAINSAIT: AWS MCP audit logging
+CREATE TABLE IF NOT EXISTS aws_mcp_audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    mcp_server_type VARCHAR(50) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    tool_name VARCHAR(100),
+    user_id VARCHAR(255),
+    session_id VARCHAR(255),
+    request_data JSONB,
+    response_data JSONB,
+    duration_ms INTEGER,
+    status VARCHAR(20) DEFAULT 'success',
+    error_message TEXT,
+    
+    -- MEDICAL: Healthcare-specific fields
+    resource_type VARCHAR(50),
+    resource_id VARCHAR(255),
+    patient_id VARCHAR(255),
+    phi_accessed BOOLEAN DEFAULT FALSE,
+    
+    -- BRAINSAIT: Compliance fields
+    hipaa_compliant BOOLEAN DEFAULT TRUE,
+    nphies_relevant BOOLEAN DEFAULT FALSE,
+    compliance_tags JSONB,
+    
+    -- NEURAL: Performance tracking
+    memory_usage_mb INTEGER,
+    cpu_usage_percent DECIMAL(5,2),
+    
+    CONSTRAINT valid_status CHECK (status IN ('success', 'error', 'warning')),
+    CONSTRAINT valid_mcp_server CHECK (mcp_server_type IN (
+        'aws-healthlake', 'aws-healthomics', 'aws-core',
+        'aws-comprehend-medical', 'aws-cloudwatch', 'aws-application-signals'
+    ))
+);
+
+-- MEDICAL: AWS HealthLake resource tracking
+CREATE TABLE IF NOT EXISTS healthlake_resources (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    datastore_id VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    resource_id VARCHAR(100) NOT NULL,
+    fhir_version VARCHAR(10) DEFAULT 'R4',
+    resource_data JSONB NOT NULL,
+    
+    -- BRAINSAIT: Audit fields
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by VARCHAR(255),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_by VARCHAR(255),
+    
+    -- MEDICAL: Clinical context
+    patient_reference VARCHAR(255),
+    encounter_reference VARCHAR(255),
+    practitioner_reference VARCHAR(255),
+    
+    -- BRAINSAIT: Compliance tracking
+    phi_encrypted BOOLEAN DEFAULT TRUE,
+    audit_trail JSONB DEFAULT '[]'::jsonb,
+    
+    UNIQUE(datastore_id, resource_type, resource_id)
+);
+
+-- MEDICAL: AWS HealthOmics workflow tracking
+CREATE TABLE IF NOT EXISTS healthomics_workflows (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workflow_id VARCHAR(100) NOT NULL UNIQUE,
+    workflow_name VARCHAR(255),
+    workflow_type VARCHAR(50), -- WDL, CWL, Nextflow
+    workflow_definition JSONB,
+    
+    -- MEDICAL: Genomics context
+    analysis_type VARCHAR(100), -- variant-calling, alignment, etc.
+    reference_genome VARCHAR(50),
+    input_samples JSONB DEFAULT '[]'::jsonb,
+    
+    -- NEURAL: Execution tracking
+    status VARCHAR(50) DEFAULT 'created',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    total_runtime_minutes INTEGER,
+    
+    -- BRAINSAIT: Cost and resource tracking
+    estimated_cost_usd DECIMAL(10,2),
+    compute_resources_used JSONB,
+    
+    CONSTRAINT valid_workflow_status CHECK (status IN (
+        'created', 'starting', 'running', 'completed', 'failed', 'cancelled'
+    ))
+);
+
+-- MEDICAL: HealthOmics workflow runs
+CREATE TABLE IF NOT EXISTS healthomics_runs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    run_id VARCHAR(100) NOT NULL UNIQUE,
+    workflow_id VARCHAR(100) NOT NULL,
+    run_name VARCHAR(255),
+    
+    -- MEDICAL: Input/output tracking
+    input_parameters JSONB,
+    output_location VARCHAR(500),
+    output_files JSONB DEFAULT '[]'::jsonb,
+    
+    -- NEURAL: Performance metrics
+    status VARCHAR(50) DEFAULT 'submitted',
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    duration_minutes INTEGER,
+    cpu_utilization_avg DECIMAL(5,2),
+    memory_utilization_avg DECIMAL(5,2),
+    
+    -- BRAINSAIT: Cost tracking
+    actual_cost_usd DECIMAL(10,2),
+    cost_breakdown JSONB,
+    
+    FOREIGN KEY (workflow_id) REFERENCES healthomics_workflows(workflow_id)
+);
+
+-- NEURAL: MCP server performance metrics
+CREATE TABLE IF NOT EXISTS mcp_server_metrics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    server_type VARCHAR(50) NOT NULL,
+    
+    -- NEURAL: Performance metrics
+    requests_per_minute INTEGER DEFAULT 0,
+    average_response_time_ms DECIMAL(8,2),
+    success_rate_percent DECIMAL(5,2),
+    error_count INTEGER DEFAULT 0,
+    
+    -- BRAINSAIT: Resource utilization
+    cpu_usage_percent DECIMAL(5,2),
+    memory_usage_mb INTEGER,
+    disk_usage_mb INTEGER,
+    network_io_kb INTEGER,
+    
+    -- MEDICAL: Healthcare-specific metrics
+    fhir_operations_count INTEGER DEFAULT 0,
+    phi_access_count INTEGER DEFAULT 0,
+    compliance_violations INTEGER DEFAULT 0,
+    
+    -- NEURAL: AI/ML metrics
+    ai_model_inference_count INTEGER DEFAULT 0,
+    ai_processing_time_ms DECIMAL(10,2),
+    
+    CONSTRAINT valid_server_type_metrics CHECK (server_type IN (
+        'aws-healthlake', 'aws-healthomics', 'aws-core',
+        'aws-comprehend-medical', 'mcp-gateway'
+    ))
+);
+
+-- BRAINSAIT: Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_aws_mcp_audit_timestamp ON aws_mcp_audit_logs(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_aws_mcp_audit_server_type ON aws_mcp_audit_logs(mcp_server_type);
+CREATE INDEX IF NOT EXISTS idx_aws_mcp_audit_user ON aws_mcp_audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_aws_mcp_audit_phi ON aws_mcp_audit_logs(phi_accessed) WHERE phi_accessed = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_healthlake_resources_datastore ON healthlake_resources(datastore_id);
+CREATE INDEX IF NOT EXISTS idx_healthlake_resources_type ON healthlake_resources(resource_type);
+CREATE INDEX IF NOT EXISTS idx_healthlake_resources_patient ON healthlake_resources(patient_reference);
+
+CREATE INDEX IF NOT EXISTS idx_healthomics_workflows_status ON healthomics_workflows(status);
+CREATE INDEX IF NOT EXISTS idx_healthomics_workflows_created ON healthomics_workflows(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_healthomics_runs_workflow ON healthomics_runs(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_healthomics_runs_status ON healthomics_runs(status);
+
+CREATE INDEX IF NOT EXISTS idx_mcp_metrics_timestamp ON mcp_server_metrics(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_mcp_metrics_server ON mcp_server_metrics(server_type);
+
+-- BRAINSAIT: Create views for monitoring
+CREATE OR REPLACE VIEW aws_mcp_health_summary AS
+SELECT 
+    mcp_server_type,
+    COUNT(*) as total_requests,
+    COUNT(*) FILTER (WHERE status = 'success') as successful_requests,
+    COUNT(*) FILTER (WHERE status = 'error') as failed_requests,
+    COUNT(*) FILTER (WHERE phi_accessed = TRUE) as phi_access_count,
+    AVG(duration_ms) as avg_response_time_ms,
+    MAX(timestamp) as last_activity
+FROM aws_mcp_audit_logs 
+WHERE timestamp >= NOW() - INTERVAL '24 hours'
+GROUP BY mcp_server_type;
+
+CREATE OR REPLACE VIEW healthlake_activity_summary AS
+SELECT 
+    datastore_id,
+    resource_type,
+    COUNT(*) as resource_count,
+    COUNT(DISTINCT patient_reference) as unique_patients,
+    MAX(updated_at) as last_updated
+FROM healthlake_resources
+GROUP BY datastore_id, resource_type;
+
+CREATE OR REPLACE VIEW healthomics_workflow_summary AS
+SELECT 
+    workflow_type,
+    analysis_type,
+    COUNT(*) as total_workflows,
+    COUNT(*) FILTER (WHERE status = 'completed') as completed_workflows,
+    COUNT(*) FILTER (WHERE status = 'failed') as failed_workflows,
+    AVG(total_runtime_minutes) as avg_runtime_minutes,
+    SUM(estimated_cost_usd) as total_estimated_cost
+FROM healthomics_workflows
+GROUP BY workflow_type, analysis_type;
+
+-- BRAINSAIT: Insert initial configuration data
+INSERT INTO mcp_server_metrics (server_type, requests_per_minute, average_response_time_ms, success_rate_percent)
+VALUES 
+    ('aws-healthlake', 0, 0, 100),
+    ('aws-healthomics', 0, 0, 100),
+    ('aws-core', 0, 0, 100),
+    ('mcp-gateway', 0, 0, 100)
+ON CONFLICT DO NOTHING;
+
+-- BRAINSAIT: Database setup completion
+DO $
+BEGIN
+    RAISE NOTICE '🧠 BrainSAIT AWS MCP database initialized successfully';
+    RAISE NOTICE '🏥 HealthLake FHIR tracking enabled';
+    RAISE NOTICE '🧬 HealthOmics genomics workflow tracking enabled';
+    RAISE NOTICE '🔐 HIPAA-compliant audit logging configured';
+    RAISE NOTICE '📊 Performance monitoring tables created';
+END $;

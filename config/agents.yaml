@@ -1,0 +1,26 @@
+agents:
+  masterlinc:
+    type: "orchestration"
+    capabilities: ["workflow", "coordination", "routing"]
+    websocket_endpoint: "ws://localhost:8001/agents/masterlinc"
+    
+  healthcarelinc:
+    type: "healthcare"
+    capabilities: ["fhir", "clinical-workflows", "nphies"]
+    websocket_endpoint: "ws://localhost:8001/agents/healthcare"
+    compliance_level: "hipaa"
+    
+  ttlinc:
+    type: "automation"
+    capabilities: ["task-scheduling", "workflow-automation"]
+    websocket_endpoint: "ws://localhost:8001/agents/automation"
+    
+  clinicallinc:
+    type: "clinical"
+    capabilities: ["clinical-decision-support", "patient-data"]
+    websocket_endpoint: "ws://localhost:8001/agents/clinical"
+    
+  compliancelinc:
+    type: "compliance"
+    capabilities: ["audit", "encryption", "access-control"]
+    websocket_endpoint: "ws://localhost:8001/agents/compliance"
